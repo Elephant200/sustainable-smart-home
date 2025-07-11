@@ -53,8 +53,8 @@ export function DeleteAccountCard() {
         throw new Error(data.error || 'Failed to delete account');
       }
 
-      // Redirect to home page with success message
-      router.push("/?deleted=true");
+      // Redirect to account deleted page
+      router.push("/auth/account-deleted");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Failed to delete account");
     } finally {

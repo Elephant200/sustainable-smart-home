@@ -16,14 +16,14 @@ export default function Page() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                Thank you for signing up!
+                Account Deleted
               </CardTitle>
-              <CardDescription>Check your email to confirm</CardDescription>
+              <CardDescription>Your account has been successfully removed</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
+                Your account and all associated data have been permanently deleted. 
+                Thank you for using Sustainable Smart Home.
               </p>
               <Button asChild className="w-full">
                 <Link href="/">Return to Home</Link>

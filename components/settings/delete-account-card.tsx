@@ -41,7 +41,7 @@ export function DeleteAccountCard() {
 
     try {
       // Call the API route to delete the account
-      const response = await fetch('/api/delete-account', {
+      const response = await fetch('/api/auth/delete-account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

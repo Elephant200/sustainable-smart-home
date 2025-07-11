@@ -1,6 +1,3 @@
-import { NextLogo } from "./next-logo";
-import { SupabaseLogo } from "./supabase-logo";
-
 export function Hero() {
   return (
     <div className="flex flex-col gap-8 items-center text-center">

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { EmailVerificationCard } from "@/components/email-verification-card";
-import { PasswordChangeCard } from "@/components/password-change-card";
+import { EmailVerificationCard } from "@/components/settings/email-verification-card";
+import { PasswordChangeCard } from "@/components/settings/password-change-card";
 
 export default async function SettingsPage() {
   const supabase = await createClient();

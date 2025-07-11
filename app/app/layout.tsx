@@ -18,15 +18,13 @@ export default function DashboardLayout({
             <AuthButton />
           </div>
         </nav>
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          {children}
-        </div>
+        
+        {children}
 
         <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
           <p className="text-muted-foreground">
             Build your sustainable future
           </p>
-          <ThemeSwitcher />
         </footer>
       </div>
     </main>

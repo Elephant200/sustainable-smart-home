@@ -13,7 +13,7 @@ export async function AuthButton() {
   return user ? (
     <div className="flex items-center gap-4">
       <Button asChild size="sm" variant="outline">
-        <Link href="/dashboard">Dashboard</Link>
+        <Link href="/app">Dashboard</Link>
       </Button>
       <ProfileDropdown userEmail={user.email!} />
     </div>

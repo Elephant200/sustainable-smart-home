@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useState } from "react";
-import { AlertCircle } from "lucide-react";
 
 export function ForgotPasswordForm({
   className,
@@ -32,7 +31,6 @@ export function ForgotPasswordForm({
     setError(null);
 
     try {
-      // The url which will be included in the email. This URL needs to be configured in your redirect URLs in the Supabase dashboard at https://supabase.com/dashboard/project/_/auth/url-configuration
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/update-password`,
       });
@@ -55,15 +53,9 @@ export function ForgotPasswordForm({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              If you registered using your email and password and your email is verified, 
-              you will receive a password reset email.
+              If you registered using your email and password, you will receive
+              a password reset email.
             </p>
-            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-md p-3">
-              <p className="text-sm text-blue-800">
-                <strong>Not receiving the email?</strong> Make sure your email address is verified. 
-                You can verify it by logging in and going to Settings.
-              </p>
-            </div>
           </CardContent>
         </Card>
       ) : (
@@ -76,20 +68,7 @@ export function ForgotPasswordForm({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                <div>
-                  <p className="text-sm text-yellow-800">
-                    <strong>Important:</strong> Password reset only works for verified email addresses.
-                  </p>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    If your email isn't verified, please log in and verify it in Settings first.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
+
             <form onSubmit={handleForgotPassword}>
               <div className="flex flex-col gap-6">
                 <div className="grid gap-2">

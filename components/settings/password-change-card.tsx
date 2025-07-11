@@ -12,13 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Lock, AlertCircle } from "lucide-react";
+import { Lock } from "lucide-react";
 
-interface PasswordChangeCardProps {
-  isEmailVerified: boolean;
-}
+interface PasswordChangeCardProps {}
 
-export function PasswordChangeCard({ isEmailVerified }: PasswordChangeCardProps) {
+export function PasswordChangeCard() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -75,17 +73,6 @@ export function PasswordChangeCard({ isEmailVerified }: PasswordChangeCardProps)
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {!isEmailVerified && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
-            <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
-              <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> We recommend verifying your email first. If you forget your new password and your email isn't verified, you won't be able to reset it.
-              </p>
-            </div>
-          </div>
-        )}
-        
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="new-password">New Password</Label>

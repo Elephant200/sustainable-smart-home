@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { EmailVerificationCard } from "@/components/settings/email-verification-card";
 import { PasswordChangeCard } from "@/components/settings/password-change-card";
 
 export default async function SettingsPage() {
@@ -10,8 +9,6 @@ export default async function SettingsPage() {
   if (error || !data?.user) {
     redirect("/auth/login");
   }
-
-  const isEmailVerified = data.user.email_confirmed_at !== null;
 
   return (
     <main className="min-h-screen flex flex-col items-center">
@@ -33,12 +30,7 @@ export default async function SettingsPage() {
             <p className="text-muted-foreground">Manage your account settings and preferences</p>
           </div>
           
-          <EmailVerificationCard 
-            userEmail={data.user.email!} 
-            isVerified={isEmailVerified} 
-          />
-          
-          <PasswordChangeCard isEmailVerified={isEmailVerified} />
+          <PasswordChangeCard />
         </div>
       </div>
     </main>

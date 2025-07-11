@@ -3,8 +3,21 @@ import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
+import { Suspense } from "react";
 
-export default async function Home() {
+function DeletedMessage({ searchParams }: { searchParams: { deleted?: string } }) {
+  if (!searchParams.deleted) return null;
+  
+  return (
+    <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4 max-w-2xl">
+      <p className="text-sm text-green-800">
+        ✅ Your account has been successfully deleted. Thank you for using Sustainable Smart Home.
+      </p>
+    </div>
+  );
+}
+
+export default async function Home({ searchParams }: { searchParams: { deleted?: string } }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -21,6 +34,10 @@ export default async function Home() {
         </nav>
         
         <div className="flex-1 flex flex-col items-center justify-center max-w-2xl p-8 text-center">
+          <Suspense fallback={null}>
+            <DeletedMessage searchParams={searchParams} />
+          </Suspense>
+          
           <h1 className="text-4xl md:text-6xl font-bold mb-6 text-gradient">
             Sustainable Smart Home
           </h1>

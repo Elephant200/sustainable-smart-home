@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PasswordChangeCard } from "@/components/settings/password-change-card";
+import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -31,6 +32,8 @@ export default async function SettingsPage() {
           </div>
           
           <PasswordChangeCard />
+          
+          <DeleteAccountCard />
         </div>
       </div>
     </main>

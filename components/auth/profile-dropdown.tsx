@@ -41,7 +41,7 @@ export function ProfileDropdown({ userEmail }: ProfileDropdownProps) {
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/settings" className="cursor-pointer">
+          <Link href="/app/settings" className="cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             Settings
           </Link>

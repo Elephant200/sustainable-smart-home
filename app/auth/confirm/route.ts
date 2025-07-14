@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
-      // Email verified successfully, redirect to next page with success message
-      redirect(`${next}?verified=true`);
+      // Email verified successfully, redirect to next page
+      redirect(next);
     } else {
       // redirect the user to an error page with some instructions
       redirect(`/auth/error?error=${error?.message}`);

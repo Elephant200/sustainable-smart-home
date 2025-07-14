@@ -1,5 +1,4 @@
 import { AuthButton } from "@/components/auth/auth-button";
-import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -43,7 +42,6 @@ export default async function Home() {
           <p className="text-muted-foreground">
             Build your sustainable future
           </p>
-          <ThemeSwitcher />
         </footer>
       </div>
     </main>

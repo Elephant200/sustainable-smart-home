@@ -33,7 +33,7 @@ const ThemeSettingsCard = () => {
       case "light": return "Light";
       case "dark": return "Dark";
       case "system": return "System";
-      default: return "System";
+      default: return "Light";
     }
   };
 
@@ -42,7 +42,7 @@ const ThemeSettingsCard = () => {
       case "light": return <Sun size={ICON_SIZE} className="text-muted-foreground" />;
       case "dark": return <Moon size={ICON_SIZE} className="text-muted-foreground" />;
       case "system": return <Laptop size={ICON_SIZE} className="text-muted-foreground" />;
-      default: return <Laptop size={ICON_SIZE} className="text-muted-foreground" />;
+      default: return <Sun size={ICON_SIZE} className="text-muted-foreground" />;
     }
   };
 

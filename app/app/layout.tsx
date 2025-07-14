@@ -1,5 +1,4 @@
 import { AuthButton } from "@/components/auth/auth-button";
-import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import Link from "next/link";
 
 export default function DashboardLayout({

@@ -14,10 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
-interface PasswordChangeCardProps {}
-
 export function PasswordChangeCard() {
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +48,6 @@ export function PasswordChangeCard() {
       if (error) throw error;
       
       setMessage("Password updated successfully!");
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: unknown) {

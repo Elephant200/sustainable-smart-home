@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ error: string }>;
+  searchParams: Promise<{ error: string, error_code: string }>;
 }) {
   const params = await searchParams;
 
@@ -20,7 +20,13 @@ export default async function Page({
             <CardContent>
               {params?.error ? (
                 <p className="text-sm text-muted-foreground">
-                  Code error: {params.error}
+                  Error Message: {params.error}
+                  {params.error_code && (
+                    <>
+                      <br />
+                      Error Code: {params.error_code}
+                    </>
+                  )}
                 </p>
               ) : (
                 <p className="text-sm text-muted-foreground">

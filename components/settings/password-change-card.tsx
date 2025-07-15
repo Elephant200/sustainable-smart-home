@@ -78,7 +78,7 @@ export function PasswordChangeCard() {
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
           
@@ -90,7 +90,7 @@ export function PasswordChangeCard() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
           

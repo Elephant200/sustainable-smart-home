@@ -33,7 +33,7 @@ export function DashboardTopbar({ title, subtitle, user }: DashboardTopbarProps)
   const fullName = `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.email;
 
   return (
-    <div className="bg-background border-b shadow-sm">
+    <div className="bg-background border-b shadow-sm sticky top-0 z-10">
       <div className="flex items-center justify-between px-6 py-4">
         {/* Page Title */}
         <div>

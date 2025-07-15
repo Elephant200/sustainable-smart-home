@@ -63,7 +63,7 @@ export function DashboardSidenav() {
   const pathname = usePathname();
 
   return (
-    <div className="w-64 bg-background border-r min-h-screen flex flex-col">
+    <div className="w-64 bg-background border-r min-h-screen flex flex-col sticky top-0 self-start">
       {/* Logo and Title */}
       <div className="p-6 border-b">
         <Link href="/app" className="flex items-center gap-3">
@@ -81,7 +81,7 @@ export function DashboardSidenav() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
           {navigationItems.map((item) => {
             const isActive = pathname === item.href;

@@ -70,7 +70,7 @@ export function SettingsNavigation() {
   }, []);
 
   return (
-    <div className="w-64 bg-card rounded-lg border p-4 h-fit sticky top-6">
+    <div className="w-64 bg-card rounded-lg border p-4 h-fit sticky top-24">
       <h3 className="font-semibold text-sm mb-4 text-muted-foreground uppercase tracking-wider">
         Settings
       </h3>

@@ -1,7 +1,3 @@
-import { redirect } from "next/navigation";
-
-import { createClient } from "@/lib/supabase/server";
-
 export default function DashboardPage() {
   return (
     <div className="space-y-6">

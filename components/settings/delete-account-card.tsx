@@ -74,14 +74,14 @@ export function DeleteAccountCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+        <div className="bg-warning border border-warning rounded-md p-3 mb-4">
           <div className="flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5" />
+            <AlertTriangle className="h-4 w-4 text-warning-foreground mt-0.5" />
             <div>
-              <p className="text-sm text-red-800">
+              <p className="text-sm text-warning-foreground">
                 <strong>Warning:</strong> This action is irreversible.
               </p>
-              <p className="text-sm text-red-700 mt-1">
+              <p className="text-sm text-warning-foreground mt-1">
                 All your data will be permanently deleted and cannot be recovered.
               </p>
             </div>

@@ -1,33 +1,92 @@
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Battery, Zap, Settings, Heart } from "lucide-react";
+
 export default function BatteryPage() {
   return (
     <div className="space-y-6">
-      <div className="bg-card rounded-lg border p-6">
-        <h2 className="text-xl font-semibold mb-2">Battery Storage Page</h2>
-        <p className="text-muted-foreground">
-          This is the Battery Storage skeleton page. Battery storage optimization features will be implemented here.
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Battery Storage</CardTitle>
+          <CardDescription>
+            Optimize your battery storage system for maximum efficiency and longevity
+          </CardDescription>
+        </CardHeader>
+      </Card>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Current Charge</h3>
-          <p className="text-sm text-muted-foreground">Battery charge level and capacity</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Battery className="h-4 w-4" />
+              Current Charge
+            </CardTitle>
+            <CardDescription>Battery charge level and capacity</CardDescription>
+            <CardAction>
+              <Badge variant="default">85%</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Battery charge monitoring and capacity tracking will be displayed here
+            </p>
+          </CardContent>
+        </Card>
         
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Charge/Discharge Rate</h3>
-          <p className="text-sm text-muted-foreground">Current power flow</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-4 w-4" />
+              Charge/Discharge Rate
+            </CardTitle>
+            <CardDescription>Current power flow</CardDescription>
+            <CardAction>
+              <Badge variant="outline">Charging</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Real-time power flow visualization will be implemented here
+            </p>
+          </CardContent>
+        </Card>
         
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Optimization Settings</h3>
-          <p className="text-sm text-muted-foreground">Smart charging preferences</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Optimization Settings
+            </CardTitle>
+            <CardDescription>Smart charging preferences</CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm">Configure</Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Smart charging optimization controls will be available here
+            </p>
+          </CardContent>
+        </Card>
         
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Battery Health</h3>
-          <p className="text-sm text-muted-foreground">System health and maintenance</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="h-4 w-4" />
+              Battery Health
+            </CardTitle>
+            <CardDescription>System health and maintenance</CardDescription>
+            <CardAction>
+              <Badge variant="secondary">Excellent</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Battery health monitoring and maintenance alerts will be shown here
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

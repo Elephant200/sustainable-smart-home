@@ -1,33 +1,92 @@
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Bell, Settings, Clock, Phone } from "lucide-react";
+
 export default function AlertsPage() {
   return (
     <div className="space-y-6">
-      <div className="bg-card rounded-lg border p-6">
-        <h2 className="text-xl font-semibold mb-2">Alerts Page</h2>
-        <p className="text-muted-foreground">
-          This is the Alerts skeleton page. System notifications and alerts will be implemented here.
-        </p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Alerts & Notifications</CardTitle>
+          <CardDescription>
+            Monitor system notifications, configure alert preferences, and manage emergency contacts
+          </CardDescription>
+        </CardHeader>
+      </Card>
       
       <div className="grid grid-cols-1 gap-6">
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Recent Alerts</h3>
-          <p className="text-sm text-muted-foreground">Latest system notifications</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Recent Alerts
+            </CardTitle>
+            <CardDescription>Latest system notifications</CardDescription>
+            <CardAction>
+              <Badge variant="outline">3 New</Badge>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Recent system alerts and notifications will be displayed here
+            </p>
+          </CardContent>
+        </Card>
         
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Alert Settings</h3>
-          <p className="text-sm text-muted-foreground">Configure notification preferences</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Alert Settings
+            </CardTitle>
+            <CardDescription>Configure notification preferences</CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm">Configure</Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Notification preferences and alert configuration will be available here
+            </p>
+          </CardContent>
+        </Card>
         
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Alert History</h3>
-          <p className="text-sm text-muted-foreground">Historical alert log</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Alert History
+            </CardTitle>
+            <CardDescription>Historical alert log</CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm">View Archive</Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Historical alert logs and system event tracking will be shown here
+            </p>
+          </CardContent>
+        </Card>
         
-        <div className="bg-card rounded-lg border p-4">
-          <h3 className="font-medium mb-2">Emergency Contacts</h3>
-          <p className="text-sm text-muted-foreground">Critical alert notifications</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              Emergency Contacts
+            </CardTitle>
+            <CardDescription>Critical alert notifications</CardDescription>
+            <CardAction>
+              <Button variant="outline" size="sm">Manage Contacts</Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Emergency contact management for critical system alerts will be available here
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

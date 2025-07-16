@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { UserInitialsAvatar } from "@/components/ui/user-initials";
 import { ChevronDown, LogOut } from "lucide-react";
 import { User } from "@supabase/supabase-js";
 
@@ -45,19 +46,23 @@ export function DashboardTopbar({ title, subtitle, user }: DashboardTopbarProps)
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
+              <UserInitialsAvatar user={user} />
               <span className="text-sm font-medium">{fullName}</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none text-muted-foreground">
-                  {fullName}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user.email}
-                </p>
+              <div className="flex items-center gap-2">
+                <UserInitialsAvatar user={user} />
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none text-muted-foreground">
+                    {fullName}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user.email}
+                  </p>
+                </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

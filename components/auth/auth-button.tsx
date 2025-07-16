@@ -15,7 +15,7 @@ export async function AuthButton() {
       <Button asChild size="sm" variant="outline">
         <Link href="/app">Dashboard</Link>
       </Button>
-      <ProfileDropdown userEmail={user.email!} />
+      <ProfileDropdown user={user} />
     </div>
   ) : (
     <div className="flex gap-2">

@@ -27,6 +27,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
+    router.refresh();
   };
 
   const fullName = `${user.user_metadata?.first_name || ''} ${user.user_metadata?.last_name || ''}`.trim() || user.email;

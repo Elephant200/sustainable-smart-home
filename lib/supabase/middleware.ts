@@ -45,13 +45,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Only protect /app routes - allow public access to other pages including 404s
   if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
+    request.nextUrl.pathname.startsWith("/app") &&
+    !user
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // no user, redirect to login page for protected routes
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     return NextResponse.redirect(url);

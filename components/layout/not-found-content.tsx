@@ -15,7 +15,7 @@ export function NotFoundContent() {
           <h1 className="text-6xl font-bold text-primary">404</h1>
           <h2 className="text-2xl font-semibold text-foreground">Page Not Found</h2>
           <p className="text-muted-foreground">
-            Sorry, we couldn't find the page you're looking for. It might have been moved, deleted, or you may have entered the wrong URL.
+            Sorry, we couldn&apos;t find the page you&apos;re looking for. It might have been moved, deleted, or you may have entered the wrong URL.
           </p>
         </div>
         

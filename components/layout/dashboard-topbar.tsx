@@ -68,7 +68,7 @@ export function DashboardTopbar({ title, subtitle, user }: DashboardTopbarProps)
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={handleSignOut}
-              className="text-red-600 hover:text-red-700 focus:text-red-700"
+              className="text-red-500 hover:text-red-600 focus:text-red-600"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sign out

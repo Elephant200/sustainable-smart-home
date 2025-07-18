@@ -1,4 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ error: string, error_code: string }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  return {
+    title: `Error: ${params.error_code}`,
+  };
+}
 
 export default async function Page({
   searchParams,

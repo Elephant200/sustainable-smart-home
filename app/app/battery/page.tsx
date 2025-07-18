@@ -2,6 +2,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Battery, Zap, Settings, Heart } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Battery Storage",
+};
 
 export default function BatteryPage() {
   return (

@@ -9,7 +9,10 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Sustainable Smart Home",
+  title: {
+    default: "Sustainable Smart Home",
+    template: "%s | Sustainable Smart Home",
+  },
   description: "Build a smarter, greener future for your home",
 };
 

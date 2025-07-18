@@ -2,6 +2,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Car, Calendar, Zap, DollarSign } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "EV Charging",
+};
 
 export default function EVChargingPage() {
   return (

@@ -15,7 +15,7 @@ export async function generateMetadata({
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ error: string, error_code: string }>;
+  searchParams: Promise<{ error: string, error_code: string, error_description: string }>;
 }) {
   const params = await searchParams;
 
@@ -37,6 +37,12 @@ export default async function Page({
                     <>
                       <br />
                       Error Code: {params.error_code}
+                    </>
+                  )}
+                  {params.error_description && (
+                    <>
+                      <br />
+                      Error Description: {params.error_description}
                     </>
                   )}
                 </p>

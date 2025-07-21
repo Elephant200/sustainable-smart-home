@@ -4,6 +4,7 @@ import { PasswordChangeCard } from "@/components/settings/password-change-card";
 import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 import { ThemeSettingsCard } from "@/components/settings/theme-settings-card";
 import { SettingsNavigation } from "@/components/settings/settings-navigation";
+import { ConfigurationAlert } from "@/components/settings/configuration-alert";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import type { Metadata } from "next";
 
@@ -21,6 +22,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
+      <ConfigurationAlert />
       {/* Keep the uppermost description card in place */}
       <Card>
         <CardHeader>
@@ -38,6 +40,51 @@ export default async function SettingsPage() {
         
         {/* Right Content Area */}
         <div className="flex-1 space-y-8">
+          {/* Device Configuration Section */}
+          <section id="device-configuration" className="scroll-mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Device Configuration</CardTitle>
+                <CardDescription>Configure your smart home devices</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground">Device configuration options will be implemented here.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+          
+          {/* Optimization Preferences Section */}
+          <section id="optimization-preferences" className="scroll-mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Optimization Preferences</CardTitle>
+                <CardDescription>Energy and cost optimization settings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground">Optimization preferences will be implemented here.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+          
+          {/* Notification Settings Section */}
+          <section id="notification-settings" className="scroll-mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Settings</CardTitle>
+                <CardDescription>Alert and notification preferences</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground">Notification settings will be implemented here.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+          
           {/* Account Settings Section */}
           <section id="account-settings" className="scroll-mt-6">
             <Card>
@@ -56,36 +103,6 @@ export default async function SettingsPage() {
                 
                 <div id="delete-account" className="scroll-mt-6">
                   <DeleteAccountCard />
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-          
-          {/* Device Configuration Section */}
-          <section id="device-configuration" className="scroll-mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Device Configuration</CardTitle>
-                <CardDescription>Configure your smart home devices</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Device configuration options will be implemented here.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-          
-          {/* Notification Settings Section */}
-          <section id="notification-settings" className="scroll-mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Alert and notification preferences</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Notification settings will be implemented here.</p>
                 </div>
               </CardContent>
             </Card>

@@ -69,6 +69,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  html {
+    scroll-padding-top: 5rem; /* Account for fixed topbar */
+  }
 }
 
 @layer utilities {

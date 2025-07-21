@@ -11,6 +11,18 @@ interface SettingsSection {
 
 const settingsSections: SettingsSection[] = [
   {
+    id: "device-configuration",
+    title: "Device Configuration"
+  },
+  {
+    id: "optimization-preferences",
+    title: "Optimization Preferences"
+  },
+  {
+    id: "notification-settings", 
+    title: "Notification Settings"
+  },
+  {
     id: "account-settings",
     title: "Account Settings",
     subsections: [
@@ -18,19 +30,11 @@ const settingsSections: SettingsSection[] = [
       { id: "password-change", title: "Password" },
       { id: "delete-account", title: "Delete Account" }
     ]
-  },
-  {
-    id: "device-configuration",
-    title: "Device Configuration"
-  },
-  {
-    id: "notification-settings", 
-    title: "Notification Settings"
   }
 ];
 
 export function SettingsNavigation() {
-  const [activeSection, setActiveSection] = useState<string>("account-settings");
+  const [activeSection, setActiveSection] = useState<string>("device-configuration");
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);

@@ -56,6 +56,26 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Check if user is configured and redirect to settings if not (but avoid redirect loop)
+  if (
+    user &&
+    request.nextUrl.pathname.startsWith("/app") &&
+    !request.nextUrl.pathname.startsWith("/app/settings")
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("configured")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profile && !profile.configured) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/app/settings";
+      url.searchParams.set("configure", "true");
+      return NextResponse.redirect(url);
+    }
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

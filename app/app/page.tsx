@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Zap, Activity, Settings2 } from "lucide-react";
 import type { Metadata } from "next";
+import { CarbonIntensityChart } from "@/components/visualizations/carbon-intensity-chart";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -19,7 +20,7 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
       </Card>
-      
+      <CarbonIntensityChart />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>

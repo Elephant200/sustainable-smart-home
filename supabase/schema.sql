@@ -1,0 +1,410 @@
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+COMMENT ON SCHEMA "public" IS 'standard public schema';
+
+CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
+
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
+CREATE TYPE "public"."device_type" AS ENUM (
+    'solar_array',
+    'battery',
+    'ev',
+    'grid',
+    'house'
+);
+
+ALTER TYPE "public"."device_type" OWNER TO "postgres";
+
+CREATE TYPE "public"."resolution" AS ENUM (
+    '1hr',
+    '6hr',
+    '1d',
+    '7d'
+);
+
+ALTER TYPE "public"."resolution" OWNER TO "postgres";
+
+CREATE TYPE "public"."theme" AS ENUM (
+    'light',
+    'dark',
+    'system'
+);
+
+ALTER TYPE "public"."theme" OWNER TO "postgres";
+SET default_tablespace = '';
+SET default_table_access_method = "heap";
+
+CREATE TABLE IF NOT EXISTS "public"."battery_config" (
+    "device_id" "uuid" NOT NULL,
+    "capacity_kwh" double precision NOT NULL,
+    "max_flow_kw" double precision NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE "public"."battery_config" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."battery_config" IS 'Stores configuration for batteries';
+
+CREATE TABLE IF NOT EXISTS "public"."battery_state" (
+    "device_id" "uuid" NOT NULL,
+    "soc_percent" double precision NOT NULL,
+    "soc_kwh" double precision NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "battery_state_soc_percent_check" CHECK ((("soc_percent" >= (0)::double precision) AND ("soc_percent" <= (100)::double precision)))
+);
+
+ALTER TABLE "public"."battery_state" OWNER TO "postgres";
+
+CREATE TABLE IF NOT EXISTS "public"."devices" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "type" "public"."device_type" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE "public"."devices" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."devices" IS 'Lists each energy-relevant device (solar array, battery, EV, etc.) a user has.';
+
+CREATE TABLE IF NOT EXISTS "public"."energy_flows" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "source_device_id" "uuid" NOT NULL,
+    "target_device_id" "uuid" NOT NULL,
+    "source" "text" NOT NULL,
+    "target" "text" NOT NULL,
+    "energy_kwh" double precision NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    "resolution" "public"."resolution" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE "public"."energy_flows" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."energy_flows" IS 'Stores the flow of energy between various devices';
+
+CREATE TABLE IF NOT EXISTS "public"."ev_charge_sessions" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "device_id" "uuid" NOT NULL,
+    "soc_percent" double precision,
+    "energy_kwh_from_solar" double precision DEFAULT 0,
+    "energy_kwh_from_grid" double precision DEFAULT 0,
+    "energy_kwh_from_battery" double precision DEFAULT 0,
+    "plugged_in" boolean DEFAULT true NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    "resolution" "public"."resolution" DEFAULT '1hr'::"public"."resolution" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "ev_charge_sessions_soc_percent_check" CHECK ((("soc_percent" >= (0)::double precision) AND ("soc_percent" <= (100)::double precision)))
+);
+
+ALTER TABLE "public"."ev_charge_sessions" OWNER TO "postgres";
+
+CREATE TABLE IF NOT EXISTS "public"."ev_config" (
+    "device_id" "uuid" NOT NULL,
+    "battery_capacity_kwh" double precision NOT NULL,
+    "target_charge" double precision NOT NULL,
+    "departure_time" time with time zone NOT NULL,
+    "charger_power_kw" double precision NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE "public"."ev_config" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."ev_config" IS 'Configuration for EVs';
+
+CREATE TABLE IF NOT EXISTS "public"."grid_data" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    "grid_carbon_intensity" double precision NOT NULL,
+    "zone" "text" NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"()
+);
+
+ALTER TABLE "public"."grid_data" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."grid_data" IS 'Contains information about the power grid in various locations';
+
+CREATE TABLE IF NOT EXISTS "public"."house_load" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid" NOT NULL,
+    "timestamp" timestamp with time zone NOT NULL,
+    "resolution" "public"."resolution" NOT NULL,
+    "energy_kwh" double precision NOT NULL,
+    "hypothetical_co2_g" double precision,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE "public"."house_load" OWNER TO "postgres";
+
+CREATE TABLE IF NOT EXISTS "public"."profiles" (
+    "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
+    "city" "text" NOT NULL,
+    "state" "text" NOT NULL,
+    "zone_key" "text" NOT NULL,
+    "configured" boolean DEFAULT false NOT NULL
+);
+
+ALTER TABLE "public"."profiles" OWNER TO "postgres";
+
+CREATE TABLE IF NOT EXISTS "public"."solar_config" (
+    "device_id" "uuid" NOT NULL,
+    "panel_count" bigint NOT NULL,
+    "output_per_panel_kw" double precision NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+);
+
+ALTER TABLE "public"."solar_config" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."solar_config" IS 'Configuration for solar panels';
+
+ALTER TABLE ONLY "public"."battery_config"
+    ADD CONSTRAINT "battery_config_pkey" PRIMARY KEY ("device_id");
+
+ALTER TABLE ONLY "public"."battery_state"
+    ADD CONSTRAINT "battery_state_pkey" PRIMARY KEY ("device_id", "timestamp");
+
+ALTER TABLE ONLY "public"."devices"
+    ADD CONSTRAINT "devices_pkey" PRIMARY KEY ("id");
+
+ALTER TABLE ONLY "public"."energy_flows"
+    ADD CONSTRAINT "energy_flows_pkey" PRIMARY KEY ("id");
+
+ALTER TABLE ONLY "public"."ev_charge_sessions"
+    ADD CONSTRAINT "ev_charge_sessions_pkey" PRIMARY KEY ("id");
+
+ALTER TABLE ONLY "public"."ev_config"
+    ADD CONSTRAINT "ev_config_pkey" PRIMARY KEY ("device_id");
+
+ALTER TABLE ONLY "public"."grid_data"
+    ADD CONSTRAINT "grid_data_pkey" PRIMARY KEY ("id");
+
+ALTER TABLE ONLY "public"."house_load"
+    ADD CONSTRAINT "house_load_pkey" PRIMARY KEY ("id");
+
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_pkey" PRIMARY KEY ("user_id");
+
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_user_id_key" UNIQUE ("user_id");
+
+ALTER TABLE ONLY "public"."solar_config"
+    ADD CONSTRAINT "solar_config_pkey" PRIMARY KEY ("device_id");
+
+CREATE INDEX "idx_battery_state_timestamp" ON "public"."battery_state" USING "btree" ("timestamp");
+
+CREATE INDEX "idx_ev_sessions_user_time" ON "public"."ev_charge_sessions" USING "btree" ("user_id", "timestamp");
+
+CREATE INDEX "idx_house_load_user_time" ON "public"."house_load" USING "btree" ("user_id", "timestamp");
+
+ALTER TABLE ONLY "public"."battery_config"
+    ADD CONSTRAINT "battery_config_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."battery_state"
+    ADD CONSTRAINT "battery_state_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."devices"
+    ADD CONSTRAINT "devices_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."energy_flows"
+    ADD CONSTRAINT "energy_flows_source_device_id_fkey" FOREIGN KEY ("source_device_id") REFERENCES "public"."devices"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."energy_flows"
+    ADD CONSTRAINT "energy_flows_target_device_id_fkey" FOREIGN KEY ("target_device_id") REFERENCES "public"."devices"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."energy_flows"
+    ADD CONSTRAINT "energy_flows_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."ev_charge_sessions"
+    ADD CONSTRAINT "ev_charge_sessions_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."ev_charge_sessions"
+    ADD CONSTRAINT "ev_charge_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."ev_config"
+    ADD CONSTRAINT "ev_config_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."house_load"
+    ADD CONSTRAINT "house_load_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."profiles"
+    ADD CONSTRAINT "profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."solar_config"
+    ADD CONSTRAINT "solar_config_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON UPDATE CASCADE ON DELETE CASCADE;
+
+CREATE POLICY "Enable actions for users based on user_id" ON "public"."profiles" USING ((( SELECT "auth"."uid"() AS "uid") = "user_id")) WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+CREATE POLICY "Enable read access for all users" ON "public"."grid_data" FOR SELECT USING (true);
+
+CREATE POLICY "Users can access their EV config" ON "public"."ev_config" USING ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "ev_config"."device_id") AND ("devices"."user_id" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "ev_config"."device_id") AND ("devices"."user_id" = "auth"."uid"())))));
+
+CREATE POLICY "Users can access their EV sessions" ON "public"."ev_charge_sessions" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+CREATE POLICY "Users can access their battery config" ON "public"."battery_config" USING ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "battery_config"."device_id") AND ("devices"."user_id" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "battery_config"."device_id") AND ("devices"."user_id" = "auth"."uid"())))));
+
+CREATE POLICY "Users can access their battery state" ON "public"."battery_state" USING ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "battery_state"."device_id") AND ("devices"."user_id" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "battery_state"."device_id") AND ("devices"."user_id" = "auth"."uid"())))));
+
+CREATE POLICY "Users can access their house load data" ON "public"."house_load" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+CREATE POLICY "Users can access their own devices" ON "public"."devices" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+CREATE POLICY "Users can access their solar config" ON "public"."solar_config" USING ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "solar_config"."device_id") AND ("devices"."user_id" = "auth"."uid"()))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."devices"
+  WHERE (("devices"."id" = "solar_config"."device_id") AND ("devices"."user_id" = "auth"."uid"())))));
+
+CREATE POLICY "Users can perform actions on their own devices" ON "public"."energy_flows" USING (("user_id" = "auth"."uid"())) WITH CHECK (("user_id" = "auth"."uid"()));
+
+ALTER TABLE "public"."battery_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."battery_state" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."devices" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."energy_flows" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."ev_charge_sessions" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."ev_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."grid_data" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."house_load" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."solar_config" ENABLE ROW LEVEL SECURITY;
+ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+GRANT USAGE ON SCHEMA "public" TO "postgres";
+GRANT USAGE ON SCHEMA "public" TO "anon";
+GRANT USAGE ON SCHEMA "public" TO "authenticated";
+GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+GRANT ALL ON TABLE "public"."battery_config" TO "anon";
+GRANT ALL ON TABLE "public"."battery_config" TO "authenticated";
+GRANT ALL ON TABLE "public"."battery_config" TO "service_role";
+
+GRANT ALL ON TABLE "public"."battery_state" TO "anon";
+GRANT ALL ON TABLE "public"."battery_state" TO "authenticated";
+GRANT ALL ON TABLE "public"."battery_state" TO "service_role";
+
+GRANT ALL ON TABLE "public"."devices" TO "anon";
+GRANT ALL ON TABLE "public"."devices" TO "authenticated";
+GRANT ALL ON TABLE "public"."devices" TO "service_role";
+
+GRANT ALL ON TABLE "public"."energy_flows" TO "anon";
+GRANT ALL ON TABLE "public"."energy_flows" TO "authenticated";
+GRANT ALL ON TABLE "public"."energy_flows" TO "service_role";
+
+GRANT ALL ON TABLE "public"."ev_charge_sessions" TO "anon";
+GRANT ALL ON TABLE "public"."ev_charge_sessions" TO "authenticated";
+GRANT ALL ON TABLE "public"."ev_charge_sessions" TO "service_role";
+
+GRANT ALL ON TABLE "public"."ev_config" TO "anon";
+GRANT ALL ON TABLE "public"."ev_config" TO "authenticated";
+GRANT ALL ON TABLE "public"."ev_config" TO "service_role";
+
+GRANT ALL ON TABLE "public"."grid_data" TO "anon";
+GRANT ALL ON TABLE "public"."grid_data" TO "authenticated";
+GRANT ALL ON TABLE "public"."grid_data" TO "service_role";
+
+GRANT ALL ON TABLE "public"."house_load" TO "anon";
+GRANT ALL ON TABLE "public"."house_load" TO "authenticated";
+GRANT ALL ON TABLE "public"."house_load" TO "service_role";
+
+GRANT ALL ON TABLE "public"."profiles" TO "anon";
+GRANT ALL ON TABLE "public"."profiles" TO "authenticated";
+GRANT ALL ON TABLE "public"."profiles" TO "service_role";
+
+GRANT ALL ON TABLE "public"."solar_config" TO "anon";
+GRANT ALL ON TABLE "public"."solar_config" TO "authenticated";
+GRANT ALL ON TABLE "public"."solar_config" TO "service_role";
+
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
+
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
+
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
+ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+
+
+
+
+
+
+RESET ALL;

@@ -5,6 +5,7 @@ import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 import { ThemeSettingsCard } from "@/components/settings/theme-settings-card";
 import { SettingsNavigation } from "@/components/settings/settings-navigation";
 import { ConfigurationAlert } from "@/components/settings/configuration-alert";
+import { LocationSelector } from "@/components/settings/location-selector";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import type { Metadata } from "next";
 
@@ -19,6 +20,13 @@ export default async function SettingsPage() {
   if (error || !data?.user) {
     redirect("/auth/login");
   }
+
+  // Fetch current profile data for location display
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("city, state, zone_key")
+    .eq("user_id", data.user.id)
+    .single();
 
   return (
     <div className="space-y-6">
@@ -40,6 +48,19 @@ export default async function SettingsPage() {
         
         {/* Right Content Area */}
         <div className="flex-1 space-y-8">
+          {/* Location Settings Section */}
+          <section id="location-settings" className="scroll-mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Location</CardTitle>
+                <CardDescription>Set your home location for accurate energy grid data</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <LocationSelector initialProfile={profile || undefined} />
+              </CardContent>
+            </Card>
+          </section>
+          
           {/* Device Configuration Section */}
           <section id="device-configuration" className="scroll-mt-6">
             <Card>

@@ -11,6 +11,10 @@ interface SettingsSection {
 
 const settingsSections: SettingsSection[] = [
   {
+    id: "location-settings",
+    title: "Location"
+  },
+  {
     id: "device-configuration",
     title: "Device Configuration"
   },
@@ -34,7 +38,7 @@ const settingsSections: SettingsSection[] = [
 ];
 
 export function SettingsNavigation() {
-  const [activeSection, setActiveSection] = useState<string>("device-configuration");
+  const [activeSection, setActiveSection] = useState<string>("location-settings");
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);

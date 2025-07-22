@@ -38,7 +38,10 @@ export function ConfigurationAlert() {
         <DialogHeader>
           <DialogTitle>Device Configuration Required</DialogTitle>
           <DialogDescription>
-            Please configure your smart home devices to continue using the dashboard.
+            Please configure your smart home devices to begin using the sustainable smart home dashboard.
+            <br />
+            <br />
+            This will allow our optimization algorithms to work their magic and help you save energy and money. But, without your devices configured, we can't do that.
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,17 @@ export function LocationSelector({ initialProfile }: LocationSelectorProps) {
     setFeedback({ type: null, message: '' });
   };
 
+  // Auto-clear success messages after 5 seconds
+  useEffect(() => {
+    if (feedback.type === 'success') {
+      const timer = setTimeout(() => {
+        setFeedback({ type: null, message: '' });
+      }, 2500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [feedback.type]);
+
   const isFormValid = () => {
     return formData.city.trim() && 
            formData.state.trim();
@@ -51,7 +62,7 @@ export function LocationSelector({ initialProfile }: LocationSelectorProps) {
     setFeedback({ type: null, message: '' });
 
     try {
-      const response = await fetch('/api/update-location/', {
+      const response = await fetch('/api/configuration/update-location', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

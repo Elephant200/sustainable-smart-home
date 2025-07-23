@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS "public"."devices" (
     "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
     "name" "text" NOT NULL,
     "type" "public"."device_type" NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "is_active" boolean DEFAULT true NOT NULL
 );
 
 ALTER TABLE "public"."devices" OWNER TO "postgres";

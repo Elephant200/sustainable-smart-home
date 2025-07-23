@@ -16,7 +16,14 @@ const settingsSections: SettingsSection[] = [
   },
   {
     id: "device-configuration",
-    title: "Device Configuration"
+    title: "Device Configuration",
+    subsections: [
+      { id: "solar-arrays", title: "Solar Arrays" },
+      { id: "batteries", title: "Batteries" },
+      { id: "electric-vehicles", title: "Electric Vehicles" },
+      { id: "grid-connection", title: "Grid Connection" },
+      { id: "house-monitor", title: "House Monitor" }
+    ]
   },
   {
     id: "optimization-preferences",

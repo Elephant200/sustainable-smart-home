@@ -6,6 +6,7 @@ import { ThemeSettingsCard } from "@/components/settings/theme-settings-card";
 import { SettingsNavigation } from "@/components/settings/settings-navigation";
 import { ConfigurationAlert } from "@/components/settings/configuration-alert";
 import { LocationSelector } from "@/components/settings/location-selector";
+import { DeviceConfiguration } from "@/components/settings/device-configuration";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import type { Metadata } from "next";
 
@@ -66,12 +67,10 @@ export default async function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Device Configuration</CardTitle>
-                <CardDescription>Configure your smart home devices</CardDescription>
+                <CardDescription>Configure your smart home devices and energy systems</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Device configuration options will be implemented here.</p>
-                </div>
+                <DeviceConfiguration />
               </CardContent>
             </Card>
           </section>

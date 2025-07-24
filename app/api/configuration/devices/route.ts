@@ -147,6 +147,22 @@ export async function POST(request: Request) {
             max_flow_kw: config.max_flow_kw
           });
         configError = batteryError;
+
+        const { error: stateError } = await supabase
+          .from('battery_state')
+          .insert({
+            device_id: device.id,
+            timestamp: new Date(Math.floor(Date.now() / (1000 * 60 * 60)) * (1000 * 60 * 60)), // round to nearest hour
+            soc_percent: 50,
+            soc_kwh: config.capacity_kwh * 0.5,
+          });
+        if (stateError) {
+          console.error('Error inserting battery state:', stateError);
+          if (!configError) {
+            configError = stateError;
+          }
+        }
+
         break;
 
       case 'ev':
@@ -163,6 +179,22 @@ export async function POST(request: Request) {
             charger_power_kw: config.charger_power_kw
           });
         configError = evError;
+
+        const { error: evStateError } = await supabase
+          .from('ev_charge_sessions')
+          .insert({
+            user_id: user.id,
+            device_id: device.id,
+            timestamp: new Date(Math.floor(Date.now() / (1000 * 60 * 60)) * (1000 * 60 * 60)), // round to nearest hour
+            soc_percent: 50,
+            plugged_in: true,
+          });
+        if (evStateError) {
+          console.error('Error inserting ev state:', evStateError);
+          if (!configError) {
+            configError = evStateError;
+          }
+        }
         break;
 
       case 'grid':

@@ -8,6 +8,8 @@ import { ConfigurationAlert } from "@/components/settings/configuration-alert";
 import { LocationSelector } from "@/components/settings/location-selector";
 import { DeviceConfiguration } from "@/components/settings/device-configuration";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -95,11 +97,107 @@ export default async function SettingsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>Alert and notification preferences</CardDescription>
+                <CardDescription>Configure alert preferences and notification types</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Notification settings will be implemented here.</p>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold">System Alerts</h4>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">EV Charging Alerts</span>
+                        <div className="text-xs text-muted-foreground">Notifications for charging start, completion, and issues</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Battery Status</span>
+                        <div className="text-xs text-muted-foreground">Battery charge level and health updates</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Solar Performance</span>
+                        <div className="text-xs text-muted-foreground">Solar generation and efficiency alerts</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Cost Savings</span>
+                        <div className="text-xs text-muted-foreground">Daily and monthly savings achievements</div>
+                      </div>
+                      <Badge variant="outline">Disabled</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Maintenance Reminders</span>
+                        <div className="text-xs text-muted-foreground">Scheduled maintenance and cleaning alerts</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold">Performance Notifications</h4>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Efficiency Warnings</span>
+                        <div className="text-xs text-muted-foreground">System efficiency drops below threshold</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Weather Impact</span>
+                        <div className="text-xs text-muted-foreground">Weather conditions affecting solar generation</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Grid Events</span>
+                        <div className="text-xs text-muted-foreground">Power outages and grid connection status</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold">Emergency Contacts</h4>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Primary Contact</span>
+                        <div className="text-xs text-muted-foreground">+1 (555) 123-4567</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Backup Contact</span>
+                        <div className="text-xs text-muted-foreground">+1 (555) 987-6543</div>
+                      </div>
+                      <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Technician</span>
+                        <div className="text-xs text-muted-foreground">+1 (555) 456-7890</div>
+                      </div>
+                      <Badge variant="outline">On-Call</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button variant="default" size="sm">Save Changes</Button>
+                  <Button variant="outline" size="sm">Reset to Defaults</Button>
                 </div>
               </CardContent>
             </Card>

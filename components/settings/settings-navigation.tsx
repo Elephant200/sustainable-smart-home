@@ -25,10 +25,7 @@ const settingsSections: SettingsSection[] = [
       { id: "house-monitor", title: "House Monitor" }
     ]
   },
-  {
-    id: "optimization-preferences",
-    title: "Optimization Preferences"
-  },
+
   {
     id: "notification-settings", 
     title: "Notification Settings"

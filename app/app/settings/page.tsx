@@ -77,21 +77,7 @@ export default async function SettingsPage() {
             </Card>
           </section>
           
-          {/* Optimization Preferences Section */}
-          <section id="optimization-preferences" className="scroll-mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Optimization Preferences</CardTitle>
-                <CardDescription>Energy and cost optimization settings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted/50 rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground">Optimization preferences will be implemented here.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-          
+
           {/* Notification Settings Section */}
           <section id="notification-settings" className="scroll-mt-6">
             <Card>

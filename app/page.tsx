@@ -18,6 +18,7 @@ import {
   CheckCircle
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { TopNav } from "@/components/layout/top-nav";
 
@@ -153,24 +154,26 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="bg-gray-100 rounded-2xl p-8 text-center">
-              <div className="text-gray-500 text-lg mb-4">📸 Screenshot Needed:</div>
-              <div className="text-gray-700 font-medium mb-2">Dashboard Energy Flow Diagram</div>
-              <div className="text-sm text-gray-600">
-                Show the real-time energy flow diagram with arrows connecting 
-                solar → battery → house → EV and grid, displaying live power values
-              </div>
+            <div className="bg-white rounded-2xl p-4 shadow-xl border">
+              <Image
+                src="/about/flow-chart.png"
+                alt="Real-time energy flow diagram showing power connections between solar, battery, house, EV and grid"
+                width={600}
+                height={400}
+                className="w-full h-auto rounded-lg"
+              />
             </div>
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-20">
-            <div className="bg-gray-100 rounded-2xl p-8 text-center order-2 lg:order-1">
-              <div className="text-gray-500 text-lg mb-4">📸 Screenshot Needed:</div>
-              <div className="text-gray-700 font-medium mb-2">Solar Panel Monitoring</div>
-              <div className="text-sm text-gray-600">
-                Display the solar page showing individual panel icons with production numbers, 
-                daily statistics, and the solar generation chart
-              </div>
+            <div className="bg-white rounded-2xl p-4 shadow-xl border order-2 lg:order-1">
+              <Image
+                src="/about/solar-generation.png"
+                alt="Solar panel monitoring dashboard with individual panel production and generation charts"
+                width={600}
+                height={400}
+                className="w-full h-auto rounded-lg"
+              />
             </div>
             <div className="space-y-6 order-1 lg:order-2">
               <div className="space-y-4">
@@ -229,13 +232,14 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="bg-gray-100 rounded-2xl p-8 text-center">
-              <div className="text-gray-500 text-lg mb-4">📸 Screenshot Needed:</div>
-              <div className="text-gray-700 font-medium mb-2">EV Charging Dashboard</div>
-              <div className="text-sm text-gray-600">
-                Show the EV charging page with vehicle status cards, overnight charging 
-                graph, and smart scheduling interface
-              </div>
+            <div className="bg-white rounded-2xl p-4 shadow-xl border">
+              <Image
+                src="/about/ev-charging.png"
+                alt="EV charging dashboard with vehicle status cards and overnight charging schedules"
+                width={600}
+                height={400}
+                className="w-full h-auto rounded-lg"
+              />
             </div>
           </div>
         </div>
@@ -329,13 +333,14 @@ export default function LandingPage() {
             </div>
           </div>
           
-          <div className="bg-gray-100 rounded-2xl p-8 text-center">
-            <div className="text-gray-500 text-lg mb-4">📸 Screenshot Needed:</div>
-            <div className="text-gray-700 font-medium mb-2">Analytics & Savings Dashboard</div>
-            <div className="text-sm text-gray-600">
-              Display the analytics page showing cost savings charts, environmental impact 
-              metrics, and detailed financial breakdowns
-            </div>
+          <div className="bg-white rounded-2xl p-4 shadow-xl border">
+            <Image
+              src="/about/analytics.png"
+              alt="Analytics dashboard showing cost savings charts and environmental impact metrics"
+              width={800}
+              height={500}
+              className="w-full h-auto rounded-lg"
+            />
           </div>
         </div>
       </section>

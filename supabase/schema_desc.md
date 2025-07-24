@@ -42,6 +42,11 @@
 
 ### Energy & Power Flows
 
+#### `power_generation`
+
+* Records energy generation from renewable sources (solar, wind, etc.).
+* Fields: `user_id`, `device_id`, `energy_kwh`, `timestamp`, `resolution`, `weather_factor`, `efficiency_factor`, `irradiance_factor`, `updated_at`.
+
 #### `energy_flows`
 
 * Records power transfers between devices.

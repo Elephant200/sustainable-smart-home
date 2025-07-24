@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Zap, Activity, Settings2 } from "lucide-react";
 import type { Metadata } from "next";
 import { CarbonIntensityChart } from "@/components/visualizations/carbon-intensity-chart";
+import { HouseLoadChart } from "@/components/visualizations/house-load-chart";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -20,7 +21,13 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
       </Card>
+      
+      {/* House Energy Load Chart */}
+      <HouseLoadChart />
+      
+      {/* Carbon Intensity Chart */}
       <CarbonIntensityChart />
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
@@ -35,7 +42,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Energy monitoring dashboard will be implemented here
+              Additional energy metrics and controls will be displayed here
             </p>
           </CardContent>
         </Card>
@@ -48,7 +55,7 @@ export default function DashboardPage() {
             </CardTitle>
             <CardDescription>Current system health</CardDescription>
             <CardAction>
-              <Badge variant="default">Optimal</Badge>
+              <Badge variant="default">Online</Badge>
             </CardAction>
           </CardHeader>
           <CardContent>
@@ -64,15 +71,17 @@ export default function DashboardPage() {
               <Settings2 className="h-4 w-4" />
               Quick Actions
             </CardTitle>
-            <CardDescription>Frequently used controls</CardDescription>
-            <CardAction>
-              <Button variant="outline" size="sm">View All</Button>
-            </CardAction>
+            <CardDescription>Common settings and controls</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Quick control panel will be implemented here
-            </p>
+            <div className="space-y-2">
+              <Button variant="outline" size="sm" className="w-full">
+                Optimize Settings
+              </Button>
+              <Button variant="outline" size="sm" className="w-full">
+                View Reports
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -24,24 +24,22 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type GridData = {
-  id: string
+type SolarGenerationData = {
   timestamp: string
-  grid_carbon_intensity: number
-  zone: string
-  updated_at: string
+  total_generation_kwh: number
+  hour: string
 }
 
 const chartConfig = {
-  carbonIntensity: {
-    label: "Carbon Intensity",
-    color: "hsl(var(--chart-1))",
+  total_generation_kwh: {
+    label: "Solar Generation",
+    color: "hsl(45, 93%, 47%)", // Solar yellow color instead of purple
   },
 } satisfies ChartConfig
 
-export function CarbonIntensityChart() {
+export function SolarGenerationChart() {
   const [timeRange, setTimeRange] = React.useState("24h")
-  const [data, setData] = React.useState<GridData[]>([])
+  const [data, setData] = React.useState<SolarGenerationData[]>([])
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -49,28 +47,38 @@ export function CarbonIntensityChart() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/grid-data')
-        if (!response.ok) {
-          throw new Error('Failed to fetch grid data')
-        }
-        const gridData = await response.json()
-        setData(gridData)
         setError(null)
+
+        const response = await fetch(`/api/solar-generation-data?timeRange=${timeRange}`)
+        const result = await response.json()
+
+        if (!result.success) {
+          if (response.status === 401) {
+            setError("Please log in to view your solar data")
+          } else {
+            setError(result.error || 'Failed to fetch solar generation data')
+          }
+          setLoading(false)
+          return
+        }
+
+        setData(result.data)
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred')
+        console.error("Error fetching solar data:", err)
+        setError("Failed to load solar generation data")
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [])
+  }, [timeRange])
 
-  // Helper function to aggregate data by specified hour intervals
-  const aggregateData = React.useCallback((rawData: GridData[], intervalHours: number) => {
+  // Helper function to aggregate data by specified hour intervals (same as carbon intensity chart)
+  const aggregateData = React.useCallback((rawData: SolarGenerationData[], intervalHours: number) => {
     if (!rawData.length) return []
 
-    const aggregated: { [key: string]: { values: number[], timestamp: string, zone: string } } = {}
+    const aggregated: { [key: string]: { values: number[], timestamp: string } } = {}
 
     rawData.forEach(item => {
       const date = new Date(item.timestamp)
@@ -87,19 +95,22 @@ export function CarbonIntensityChart() {
         aggregated[key] = {
           values: [],
           timestamp: intervalStart.toISOString(),
-          zone: item.zone
         }
       }
       
-      aggregated[key].values.push(item.grid_carbon_intensity)
+      aggregated[key].values.push(item.total_generation_kwh)
     })
 
     // Calculate averages and return sorted data
     return Object.values(aggregated)
       .map(group => ({
         timestamp: group.timestamp,
-        carbonIntensity: Math.round(group.values.reduce((sum, val) => sum + val, 0) / group.values.length),
-        zone: group.zone,
+        total_generation_kwh: Math.round((group.values.reduce((sum, val) => sum + val, 0) / group.values.length) * 100) / 100, // Round to 2 decimal places
+        hour: new Date(group.timestamp).toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        })
       }))
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   }, [])
@@ -107,72 +118,63 @@ export function CarbonIntensityChart() {
   const filteredData = React.useMemo(() => {
     if (!data.length) return []
 
-    const now = new Date()
-    let hoursBack = 24
-
-    switch (timeRange) {
-      case "24h":
-        hoursBack = 25
-        break
-      case "7d":
-        hoursBack = 7 * 24
-        break
-      case "3m":
-        hoursBack = 3 * 30 * 24
-        break
-      case "1y":
-        hoursBack = 365 * 24
-        break
-    }
-
-    const cutoffDate = new Date(now.getTime() - hoursBack * 60 * 60 * 1000)
-
-    const filteredRawData = data
-      .filter(item => new Date(item.timestamp) >= cutoffDate)
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-
-    // For longer time periods, aggregate data to reduce granularity
+    // For longer time periods, aggregate data to reduce granularity (same as carbon intensity chart)
     if (timeRange === "3m") {
       // Aggregate to 12-hour intervals for 3 months
-      return aggregateData(filteredRawData, 12)
+      return aggregateData(data, 12)
     } else if (timeRange === "1y") {
       // Aggregate to 1-day intervals for 1 year  
-      return aggregateData(filteredRawData, 24) // 24 hours = 1 day
+      return aggregateData(data, 24) // 24 hours = 1 day
     } else {
       // Return hourly data for shorter time periods
-      return filteredRawData.map(item => ({
-        timestamp: item.timestamp,
-        carbonIntensity: item.grid_carbon_intensity,
-        zone: item.zone,
-      }))
+      return data
     }
   }, [data, timeRange, aggregateData])
 
   const getTimeRangeLabel = (range: string) => {
     switch (range) {
-      case "24h": return "Past 24 hours"
-      case "7d": return "Past 7 days"
+      case "24h": return "Last 24 hours"
+      case "7d": return "Last 7 days"
       case "3m": return "Past 3 months"
       case "1y": return "Past year"
-      default: return "Past 24 hours"
+      default: return "Last 24 hours"
     }
   }
 
-  // Calculate y-axis domain with smart padding and 100-unit height intervals
+  // Calculate y-axis domain with smart padding and appropriate intervals (adapted from carbon intensity chart)
   const yAxisDomain = React.useMemo(() => {
-    if (!filteredData.length) return [0, 100]
+    if (!filteredData.length) return [0, 5]
 
-    const values = filteredData.map(d => d.carbonIntensity)
+    const values = filteredData.map(d => d.total_generation_kwh)
     const dataMin = Math.min(...values)
     const dataMax = Math.max(...values)
 
-    // Start with minimum padding of 25 on each side
-    const paddedMin = dataMin - 25
-    const paddedMax = dataMax + 25
+    // Determine appropriate interval based on data range (smaller intervals for solar data)
+    const dataRange = dataMax - dataMin
+    let baseInterval: number
+    let paddingInterval: number
+    
+    if (dataRange <= 1) {
+      baseInterval = 0.25
+      paddingInterval = 0.25
+    } else if (dataRange <= 10) {
+      baseInterval = 0.5
+      paddingInterval = 0.5
+    } else if (dataRange <= 25) {
+      baseInterval = 1
+      paddingInterval = 1
+    } else {
+      baseInterval = 2
+      paddingInterval = 2
+    }
+
+    // Start with minimum padding on each side
+    const paddedMin = dataMin - paddingInterval
+    const paddedMax = dataMax + paddingInterval
     const currentRange = paddedMax - paddedMin
 
-    // Round up to next multiple of 100
-    const targetRange = Math.ceil(currentRange / 100) * 100
+    // Round up to next multiple of baseInterval * 2 (to get nice range)
+    const targetRange = Math.ceil(currentRange / (baseInterval * 2)) * (baseInterval * 2)
 
     // Calculate center point of the data
     const center = (paddedMin + paddedMax) / 2
@@ -181,12 +183,12 @@ export function CarbonIntensityChart() {
     const idealMin = center - (targetRange / 2)
     const idealMax = center + (targetRange / 2)
 
-    // Round to multiples of 25, ensuring non-negative minimum
-    let roundedMin = Math.max(0, Math.floor(idealMin / 25) * 25)
+    // Round to multiples of baseInterval, ensuring non-negative minimum
+    let roundedMin = Math.max(0, Math.floor(idealMin / baseInterval) * baseInterval)
     let roundedMax = roundedMin + targetRange
 
-    // Ensure max is also a multiple of 25
-    roundedMax = Math.ceil(roundedMax / 25) * 25
+    // Ensure max is also a multiple of baseInterval
+    roundedMax = Math.ceil(roundedMax / baseInterval) * baseInterval
 
     // If rounding the max changed the range, adjust the min to maintain target range
     if (roundedMax - roundedMin !== targetRange) {
@@ -202,8 +204,8 @@ export function CarbonIntensityChart() {
       <Card className="pt-0">
         <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
           <div className="grid flex-1 gap-1">
-            <CardTitle>Grid Carbon Intensity</CardTitle>
-            <CardDescription>Loading carbon intensity data...</CardDescription>
+            <CardTitle>Solar Generation</CardTitle>
+            <CardDescription>Loading solar generation data...</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -220,8 +222,8 @@ export function CarbonIntensityChart() {
       <Card className="pt-0">
         <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
           <div className="grid flex-1 gap-1">
-            <CardTitle>Grid Carbon Intensity</CardTitle>
-            <CardDescription>Error loading carbon intensity data</CardDescription>
+            <CardTitle>Solar Generation</CardTitle>
+            <CardDescription>Error loading solar generation data</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
@@ -237,13 +239,13 @@ export function CarbonIntensityChart() {
     <Card className="pt-0">
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
-          <CardTitle>Grid Carbon Intensity</CardTitle>
+          <CardTitle>Solar Generation</CardTitle>
           <CardDescription>
             {timeRange === "3m" 
-              ? "Carbon intensity averaged over 12-hour periods (gCO₂/kWh)"
+              ? "Solar generation averaged over 12-hour periods (kWh)"
               : timeRange === "1y"
-              ? "Carbon intensity averaged over 1-day periods (gCO₂/kWh)" 
-              : "Real-time carbon intensity of the electricity grid (gCO₂/kWh)"
+              ? "Solar generation averaged over 1-day periods (kWh)" 
+              : "Monitor your solar panels' energy production (kWh)"
             }
           </CardDescription>
         </div>
@@ -256,10 +258,10 @@ export function CarbonIntensityChart() {
           </SelectTrigger>
           <SelectContent className="rounded-xl">
             <SelectItem value="24h" className="rounded-lg">
-              Past 24 hours
+              Last 24 hours
             </SelectItem>
             <SelectItem value="7d" className="rounded-lg">
-              Past 7 days
+              Last 7 days
             </SelectItem>
             <SelectItem value="3m" className="rounded-lg">
               Past 3 months
@@ -277,15 +279,15 @@ export function CarbonIntensityChart() {
         >
           <AreaChart data={filteredData}>
             <defs>
-              <linearGradient id="fillCarbonIntensity" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="fillSolar" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
-                  stopColor="var(--color-carbonIntensity)"
+                  stopColor="var(--color-total_generation_kwh)"
                   stopOpacity={0.8}
                 />
                 <stop
                   offset="95%"
-                  stopColor="var(--color-carbonIntensity)"
+                  stopColor="var(--color-total_generation_kwh)"
                   stopOpacity={0.1}
                 />
               </linearGradient>
@@ -322,7 +324,7 @@ export function CarbonIntensityChart() {
                 } else {
                   return date.toLocaleDateString("en-US", {
                     month: "short",
-                    year: "2-digit",
+                    day: "numeric",
                   })
                 }
               }}
@@ -369,20 +371,20 @@ export function CarbonIntensityChart() {
                     }
                   }}
                   formatter={(value, name) => [
-                    `${value} gCO₂/kWh`,
-                    timeRange === "3m" ? "Avg Carbon Intensity (12h)" : 
-                    timeRange === "1y" ? "Avg Carbon Intensity (1d)" : 
-                    "Carbon Intensity"
+                    `${value} kWh`,
+                    timeRange === "3m" ? "Avg Solar Generation (12h)" : 
+                    timeRange === "1y" ? "Avg Solar Generation (1d)" : 
+                    "Solar Generation"
                   ]}
                   indicator="dot"
                 />
               }
             />
             <Area
-              dataKey="carbonIntensity"
+              dataKey="total_generation_kwh"
               type="natural"
-              fill="url(#fillCarbonIntensity)"
-              stroke="var(--color-carbonIntensity)"
+              fill="url(#fillSolar)"
+              stroke="var(--color-total_generation_kwh)"
               strokeWidth={2}
             />
           </AreaChart>
@@ -390,4 +392,4 @@ export function CarbonIntensityChart() {
       </CardContent>
     </Card>
   )
-}
+} 

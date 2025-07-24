@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sun, TrendingUp, CloudSun, Battery } from "lucide-react";
 import type { Metadata } from "next";
+import { SolarGenerationChart } from "@/components/visualizations/solar-generation-chart";
 
 export const metadata: Metadata = {
   title: "Solar Power",
@@ -19,6 +20,9 @@ export default function SolarPage() {
           </CardDescription>
         </CardHeader>
       </Card>
+      
+      {/* Solar Generation Chart */}
+      <SolarGenerationChart />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -52,21 +56,20 @@ export default function SolarPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Individual panel performance analytics will be shown here
+              Individual panel performance metrics will be displayed here
             </p>
           </CardContent>
         </Card>
-        
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CloudSun className="h-4 w-4" />
               Weather Impact
             </CardTitle>
-            <CardDescription>Weather conditions affecting generation</CardDescription>
-            <CardAction>
-              <Badge variant="outline">Sunny</Badge>
-            </CardAction>
+            <CardDescription>How weather affects generation</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
@@ -81,14 +84,11 @@ export default function SolarPage() {
               <Battery className="h-4 w-4" />
               Energy Storage
             </CardTitle>
-            <CardDescription>Excess energy being stored</CardDescription>
-            <CardAction>
-              <Badge variant="secondary">Storing</Badge>
-            </CardAction>
+            <CardDescription>Solar to battery efficiency</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Energy storage status and optimization will be shown here
+              Energy storage metrics will be implemented here
             </p>
           </CardContent>
         </Card>

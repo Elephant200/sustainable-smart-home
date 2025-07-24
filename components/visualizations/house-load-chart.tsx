@@ -305,7 +305,7 @@ export function HouseLoadChart() {
                       })
                     }
                   }}
-                  formatter={(value, name) => [
+                  formatter={(value) => [
                     `${value} kWh`,
                     timeRange === "3m" ? "Avg Energy Usage (12h)" : 
                     timeRange === "1y" ? "Avg Energy Usage (1d)" : 

@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Car, Calendar, Zap, DollarSign, Clock, Battery, Leaf, TrendingUp, MapPin, Settings } from "lucide-react";
+import { Car, Calendar, Zap, DollarSign, Battery, Leaf, Settings } from "lucide-react";
 import { EVChargingChart } from "@/components/visualizations/ev-charging-chart";
 import type { Metadata } from "next";
 

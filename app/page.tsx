@@ -1,18 +1,15 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   Zap, 
   Sun, 
   Battery, 
-  Car, 
-  Home, 
   TrendingUp, 
   Shield, 
   Smartphone,
   BarChart3,
   Leaf,
-  DollarSign,
   Clock,
   ArrowRight,
   CheckCircle
@@ -24,7 +21,7 @@ import { TopNav } from "@/components/layout/top-nav";
 
 export const metadata: Metadata = {
   title: "Sustainable Smart Home | Smart Energy Management",
-  description: "Monitor, optimize, and control your home's energy usage with solar panels, battery storage, and EV charging. Save money while reducing your carbon footprint.",
+  description: "Monitor, optimize, and control your home&apos;s energy usage with solar panels, battery storage, and EV charging. Save money while reducing your carbon footprint.",
 };
 
 export default function LandingPage() {
@@ -47,7 +44,7 @@ export default function LandingPage() {
                   <span className="text-gradient"> Energy Future</span>
                 </h1>
                 <p className="text-xl text-gray-600 leading-relaxed">
-                  Monitor, optimize, and control your home's energy with solar panels, battery storage, 
+                  Monitor, optimize, and control your home&apos;s energy with solar panels, battery storage, 
                   and EV charging. Save thousands while reducing your carbon footprint.
                 </p>
               </div>
@@ -122,7 +119,7 @@ export default function LandingPage() {
               Everything You Need to Manage Your Energy
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Get complete visibility and control over your home's energy ecosystem
+              Get complete visibility and control over your home&apos;s energy ecosystem
             </p>
           </div>
           
@@ -179,7 +176,7 @@ export default function LandingPage() {
               <div className="space-y-4">
                 <Badge variant="outline" className="bg-yellow-100 text-yellow-800">Solar Monitoring</Badge>
                 <h3 className="text-2xl font-bold text-gray-900">
-                  Track Every Solar Panel's Performance
+                  Track Every Solar Panel&apos;s Performance
                 </h3>
                 <p className="text-gray-600">
                   Monitor each solar panel individually with detailed production metrics, 
@@ -355,11 +352,11 @@ export default function LandingPage() {
               </h2>
               <p className="text-lg text-gray-600">
                 Our platform was designed by energy experts and smart home enthusiasts 
-                who believe that managing your home's energy should be simple, 
+                who believe that managing your home&apos;s energy should be simple, 
                 intelligent, and rewarding.
               </p>
               <p className="text-gray-600">
-                We're on a mission to accelerate the transition to sustainable energy 
+                We&apos;re on a mission to accelerate the transition to sustainable energy 
                 by making it easier for homeowners to monitor, control, and optimize 
                 their energy systems. Every kilowatt saved and every solar panel 
                 optimized brings us closer to a cleaner future.
@@ -398,7 +395,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <div className="space-y-8">
             <h2 className="text-3xl lg:text-4xl font-bold text-white">
-              Ready to Transform Your Home's Energy?
+              Ready to Transform Your Home&apos;s Energy?
             </h2>
             <p className="text-xl text-green-100">
               Join thousands of smart homeowners saving money and reducing their carbon footprint

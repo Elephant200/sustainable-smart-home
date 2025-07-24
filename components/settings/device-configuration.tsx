@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
@@ -59,7 +59,6 @@ interface DeviceConfigurationProps {
 
 export function DeviceConfiguration({ initialDevices = [] }: DeviceConfigurationProps) {
   const [devices, setDevices] = useState<DeviceWithConfig[]>(initialDevices);
-  const [isLoading, setIsLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDeviceType, setSelectedDeviceType] = useState<'solar_array' | 'battery' | 'ev' | 'grid' | 'house' | null>(null);
   const [editingDevice, setEditingDevice] = useState<DeviceWithConfig | null>(null);
@@ -68,7 +67,6 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
 
   // Fetch devices from API
   const fetchDevices = async () => {
-    setIsLoading(true);
     try {
       const response = await fetch('/api/configuration/devices');
       if (response.ok) {
@@ -79,8 +77,6 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
       }
     } catch (error) {
       console.error('Error fetching devices:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -376,7 +372,7 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
           <DialogHeader>
             <DialogTitle>Delete Device</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deviceToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{deviceToDelete?.name}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

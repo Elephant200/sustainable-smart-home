@@ -1,7 +1,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Settings, Clock, Phone, Car, Battery, Sun, Zap, DollarSign, AlertTriangle, CheckCircle, Info, TrendingUp, Shield, Cloud } from "lucide-react";
+import { Bell, Settings, Clock, Car, Battery, Sun, Zap, DollarSign, AlertTriangle, CheckCircle, Info, TrendingUp, Shield, Cloud } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -243,7 +243,7 @@ export default function AlertsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Clock className="h-5 w-5 text-green-500" />
-              Today's Events
+              Today&apos;s Events
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -333,7 +333,7 @@ export default function AlertsPage() {
           <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <div>
               <p className="text-sm font-medium">Configure Notification Settings</p>
-              <p className="text-xs text-muted-foreground">Customize which alerts you receive and how you're notified</p>
+              <p className="text-xs text-muted-foreground">Customize which alerts you receive and how you&apos;re notified</p>
             </div>
             <Button variant="outline" size="sm">
               Go to Settings

@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, DollarSign, Leaf, BarChart3, Zap, Sun, Battery, Car, Home, Target, Award, Shield } from "lucide-react";
+import { DollarSign, Leaf, BarChart3, Zap, Sun, Battery, Car, Target, Award } from "lucide-react";
 import { EnergyFlowChart } from "@/components/visualizations/energy-flow-chart";
 import { MonthlyTrendsChart } from "@/components/visualizations/monthly-trends-chart";
 import { CostSavingsChart } from "@/components/visualizations/cost-savings-chart";
@@ -50,7 +50,7 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle>Analytics & Performance Insights</CardTitle>
           <CardDescription>
-            Comprehensive analysis of your sustainable smart home's energy performance, cost savings, and environmental impact
+            Comprehensive analysis of your sustainable smart home&apos;s energy performance, cost savings, and environmental impact
           </CardDescription>
         </CardHeader>
       </Card>

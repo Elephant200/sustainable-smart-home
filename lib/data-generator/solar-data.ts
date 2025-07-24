@@ -78,7 +78,7 @@ function generateWeatherFactor(timestamp: Date, seed?: number): number {
   const randomFactor = (Math.sin(dateSeed * 1.7) + 1) / 2; // 0-1
   
   // Base weather factor with some randomness
-  let weatherFactor = 0.7 + weatherNoise + (randomFactor * 0.3);
+  const weatherFactor = 0.7 + weatherNoise + (randomFactor * 0.3);
   
   // Clamp between 0.1 and 1.0
   return Math.max(0.1, Math.min(1.0, weatherFactor));
@@ -124,7 +124,7 @@ export async function generateLiveSolarData(userId: string): Promise<SolarDataPo
       `)
       .eq('user_id', userId)
       .eq('type', 'solar_array')
-      .eq('is_active', true) as { data: DeviceWithSolarConfig[] | null, error: any };
+      .eq('is_active', true) as { data: DeviceWithSolarConfig[] | null, error: Error | null };
     
       console.log('devices', devices);
 
@@ -203,7 +203,7 @@ export async function generateHistoricalSolarData(
       `)
       .eq('user_id', userId)
       .eq('type', 'solar_array')
-      .eq('is_active', true) as { data: DeviceWithSolarConfig[] | null, error: any };
+      .eq('is_active', true) as { data: DeviceWithSolarConfig[] | null, error: Error | null };
 
     if (error) {
       console.error('Error fetching solar devices:', error);

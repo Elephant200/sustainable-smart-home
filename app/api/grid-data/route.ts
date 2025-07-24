@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserZoneKey } from "@/lib/user-profile";
 import { NextResponse } from "next/server";
-import { generateAndSaveTestData } from "@/lib/data-generator/generate-fake-grid-data";
 
 export async function GET() {
   const supabase = await createClient();

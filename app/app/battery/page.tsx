@@ -171,7 +171,7 @@ export default function BatteryPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Today's Performance
+              Today&apos;s Performance
             </CardTitle>
             <CardDescription>Daily energy storage metrics</CardDescription>
           </CardHeader>

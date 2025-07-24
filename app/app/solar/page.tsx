@@ -1,6 +1,5 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Sun, TrendingUp, CloudSun, Battery, Zap, Leaf, DollarSign } from "lucide-react";
 import type { Metadata } from "next";
 import { SolarGenerationChart } from "@/components/visualizations/solar-generation-chart";
@@ -84,7 +83,7 @@ export default function SolarPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-green-500" />
-              Today's Production
+              Today&apos;s Production
             </CardTitle>
           </CardHeader>
           <CardContent>

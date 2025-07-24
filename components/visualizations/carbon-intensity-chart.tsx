@@ -179,7 +179,6 @@ export function CarbonIntensityChart() {
 
     // Calculate ideal min/max to center the data in the target range
     const idealMin = center - (targetRange / 2)
-    const idealMax = center + (targetRange / 2)
 
     // Round to multiples of 25, ensuring non-negative minimum
     let roundedMin = Math.max(0, Math.floor(idealMin / 25) * 25)
@@ -368,7 +367,7 @@ export function CarbonIntensityChart() {
                       })
                     }
                   }}
-                  formatter={(value, name) => [
+                  formatter={(value) => [
                     `${value} gCO₂/kWh`,
                     timeRange === "3m" ? "Avg Carbon Intensity (12h)" : 
                     timeRange === "1y" ? "Avg Carbon Intensity (1d)" : 

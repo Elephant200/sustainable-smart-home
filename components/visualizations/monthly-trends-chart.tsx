@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Bar, BarChart } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { TrendingUp } from "lucide-react"
 
 import {

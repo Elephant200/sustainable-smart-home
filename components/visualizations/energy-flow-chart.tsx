@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart } from "recharts"
-import { ArrowRight, Sun, Battery, Home, Car, Zap } from "lucide-react"
+import { CartesianGrid, XAxis, YAxis, Line, LineChart } from "recharts"
+import { Zap } from "lucide-react"
 
 import {
   Card,

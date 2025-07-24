@@ -181,7 +181,6 @@ export function SolarGenerationChart() {
 
     // Calculate ideal min/max to center the data in the target range
     const idealMin = center - (targetRange / 2)
-    const idealMax = center + (targetRange / 2)
 
     // Round to multiples of baseInterval, ensuring non-negative minimum
     let roundedMin = Math.max(0, Math.floor(idealMin / baseInterval) * baseInterval)
@@ -370,7 +369,7 @@ export function SolarGenerationChart() {
                       })
                     }
                   }}
-                  formatter={(value, name) => [
+                  formatter={(value) => [
                     `${value} kWh`,
                     timeRange === "3m" ? "Avg Solar Generation (12h)" : 
                     timeRange === "1y" ? "Avg Solar Generation (1d)" : 

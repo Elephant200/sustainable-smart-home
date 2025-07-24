@@ -20,7 +20,7 @@ interface AddDeviceDialogProps {
     id: string;
     name: string;
     type: DeviceType;
-    config?: any;
+    config?: Record<string, unknown>;
   } | null;
 }
 
@@ -48,29 +48,9 @@ type DialogStep = 'form' | 'connecting' | 'connected';
 export function AddDeviceDialog({ isOpen, onClose, deviceType, existingDevices = [], onDeviceAdded, editingDevice }: AddDeviceDialogProps) {
   const [step, setStep] = useState<DialogStep>('form');
   const [formData, setFormData] = useState<FormData>({ name: '' });
-  const [isLoading, setIsLoading] = useState(false);
   const [connectionProgress, setConnectionProgress] = useState(0);
 
-  // Generate auto-filled device name
-  const generateDeviceName = (type: DeviceType): string => {
-    const typeNames = {
-      'solar_array': 'Solar Array',
-      'battery': 'Battery',
-      'ev': 'Electric Vehicle',
-      'grid': 'Electrical Grid',
-      'house': 'House Monitor'
-    };
-    
-    // Grid and House don't get numbers since there's only one of each
-    if (type === 'grid' || type === 'house') {
-      return typeNames[type];
-    }
-    
-    const existingOfType = existingDevices.filter(d => d.type === type);
-    const nextNumber = existingOfType.length + 1;
-    
-    return `${typeNames[type]} ${nextNumber}`;
-  };
+
 
   // Auto-fill device name when dialog opens or pre-populate for editing
   useEffect(() => {
@@ -80,7 +60,7 @@ export function AddDeviceDialog({ isOpen, onClose, deviceType, existingDevices =
         const configData = { ...editingDevice.config };
         
         // Handle departure_time formatting for HTML time input (HH:MM format)
-        if (configData.departure_time && deviceType === 'ev') {
+        if (configData.departure_time && deviceType === 'ev' && typeof configData.departure_time === 'string') {
           // Convert time with timezone to HH:MM format
           const timeStr = configData.departure_time;
           if (timeStr.includes('T')) {
@@ -97,11 +77,31 @@ export function AddDeviceDialog({ isOpen, onClose, deviceType, existingDevices =
           ...configData
         });
       } else {
-        // Generate new device name for adding
-        setFormData({ name: generateDeviceName(deviceType) });
+        // Generate new device name for adding - moved inside useEffect to avoid dependency issues
+        const generateName = (type: DeviceType): string => {
+          const typeNames = {
+            'solar_array': 'Solar Array',
+            'battery': 'Battery',
+            'ev': 'Electric Vehicle',
+            'grid': 'Electrical Grid',
+            'house': 'House Monitor'
+          };
+          
+          // Grid and House don't get numbers since there's only one of each
+          if (type === 'grid' || type === 'house') {
+            return typeNames[type];
+          }
+          
+          const existingOfType = existingDevices.filter(d => d.type === type);
+          const nextNumber = existingOfType.length + 1;
+          
+          return `${typeNames[type]} ${nextNumber}`;
+        };
+        
+        setFormData({ name: generateName(deviceType) });
       }
     }
-  }, [isOpen, deviceType, editingDevice]);
+  }, [isOpen, deviceType, editingDevice, existingDevices]);
 
   const handleClose = () => {
     setStep('form');

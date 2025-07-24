@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Sun, Battery, Home, Car, Zap, ArrowRight, ArrowDown, ArrowUp, ArrowLeft } from "lucide-react"
+import { Sun, Battery, Home, Car, Zap, ArrowRight } from "lucide-react"
 
 // Real-time fake data consistent with other pages
 const energyFlowData = {
@@ -38,7 +37,7 @@ function DeviceNode({
   color 
 }: { 
   device: string; 
-  icon: any; 
+  icon: React.ComponentType<{ className?: string }>; 
   position: { x: number; y: number }; 
   color: string;
 }) {
@@ -63,16 +62,12 @@ function DeviceNode({
 }
 
 function PowerFlow({ 
-  from, 
-  to, 
   power, 
   fromPos, 
   toPos,
   containerWidth,
   containerHeight
 }: { 
-  from: string; 
-  to: string; 
   power: number; 
   fromPos: { x: number; y: number }; 
   toPos: { x: number; y: number };

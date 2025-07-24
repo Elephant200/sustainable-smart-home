@@ -96,7 +96,7 @@ export function LocationSelector({ initialProfile }: LocationSelectorProps) {
         type: 'success',
         message: `Location saved successfully! Zone: ${result.zone_key}`,
       });
-    } catch (error) {
+    } catch {
       setFeedback({
         type: 'error',
         message: 'Failed to save location. Please try again.',

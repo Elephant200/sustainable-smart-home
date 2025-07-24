@@ -60,6 +60,17 @@ ALTER TABLE "public"."devices" OWNER TO "postgres";
 
 COMMENT ON TABLE "public"."devices" IS 'Lists each energy-relevant device (solar array, battery, EV, etc.) a user has.';
 
+CREATE TABLE IF NOT EXISTS "public"."carbon_thresholds" (
+  "user_id" uuid DEFAULT "auth"."uid"() NOT NULL,
+  "low_ci"  double precision,
+  "high_ci" double precision,
+  "daylight_start" time DEFAULT '08:00',
+  "daylight_end"   time DEFAULT '18:00',
+  "updated_at"     timestamptz DEFAULT now()
+);
+
+ALTER TABLE "public"."carbon_thresholds" OWNER TO "postgres";
+
 CREATE TABLE IF NOT EXISTS "public"."energy_flows" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid" DEFAULT "auth"."uid"() NOT NULL,
@@ -152,6 +163,9 @@ ALTER TABLE "public"."solar_config" OWNER TO "postgres";
 
 COMMENT ON TABLE "public"."solar_config" IS 'Configuration for solar panels';
 
+ALTER TABLE ONLY "public"."carbon_thresholds"
+    ADD CONSTRAINT "carbon_thresholds_pkey" PRIMARY KEY ("user_id");
+
 ALTER TABLE ONLY "public"."battery_config"
     ADD CONSTRAINT "battery_config_pkey" PRIMARY KEY ("device_id");
 
@@ -191,6 +205,9 @@ CREATE INDEX "idx_ev_sessions_user_time" ON "public"."ev_charge_sessions" USING 
 
 CREATE INDEX "idx_house_load_user_time" ON "public"."house_load" USING "btree" ("user_id", "timestamp");
 
+ALTER TABLE ONLY "public"."carbon_thresholds"
+    ADD CONSTRAINT "carbon_thresholds_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."profiles"("user_id") ON UPDATE CASCADE ON DELETE CASCADE;
+
 ALTER TABLE ONLY "public"."battery_config"
     ADD CONSTRAINT "battery_config_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
@@ -228,6 +245,8 @@ ALTER TABLE ONLY "public"."solar_config"
     ADD CONSTRAINT "solar_config_device_id_fkey" FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 CREATE POLICY "Enable actions for users based on user_id" ON "public"."profiles" USING ((( SELECT "auth"."uid"() AS "uid") = "user_id")) WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+CREATE POLICY "Enable actions for users based on user_id" ON "public"."carbon_thresholds" USING ((( SELECT "auth"."uid"() AS "uid") = "user_id")) WITH CHECK ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
 
 CREATE POLICY "Enable read access for all users" ON "public"."grid_data" FOR SELECT USING (true);
 

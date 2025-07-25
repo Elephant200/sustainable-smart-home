@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 
 export function DisclaimerBanner() {
   const [showDetails, setShowDetails] = useState(false);

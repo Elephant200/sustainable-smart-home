@@ -41,14 +41,15 @@ export function DisclaimerBanner() {
                     Due to a lack of physical hardware, the dashboard and features are mockups with simulated data.
                   </li>
                   <li>
+                    This means that the data (except for the grid data, which I pull from electricitymaps) is not real, and does not match up with device configuration either.
+                  </li>
+                  <li>
                     However, the interface and user experience are functional and demonstrate the future features.
                   </li>
                   <li>
                     I will be updating this website with the full functionality as I continue to work on the project.
                   </li>
                 </ul>
-                  
-
               </div>
             </div>
           </div>

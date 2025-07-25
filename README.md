@@ -10,7 +10,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Latest-green)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-blue)](https://tailwindcss.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 [**Live Demo**](https://sustainable-smart-home.vercel.app) · [**Documentation**](#documentation) · [**Report Bug**](https://github.com/Elephant200/sustainable-smart-home/issues) · [**Request Feature**](https://github.com/Elephant200/sustainable-smart-home/issues)
 

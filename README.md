@@ -1,10 +1,10 @@
-# 🏡⚡ Sustainable Smart Home
+# 🏡⚡ <span style="background: linear-gradient(to right, #059669, #2563eb, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Sustainable Smart Home</span>
 
 <div align="center">
 
 ![Favicon](app/favicon.ico)
 
-<h1 class="text-gradient">Build a smarter, greener future for your home</h1>
+<h1>Build a smarter, greener future for your home</h1>
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://typescriptlang.org/)

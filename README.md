@@ -17,6 +17,10 @@
 
 ---
 
+> **⚠️ Demo Notice:** This application currently generates simulated energy data due to the lack of physical hardware integration. While the platform cannot yet connect to actual solar panels, batteries, or EV chargers, it provides a comprehensive preview of the full energy management experience with realistic data patterns. The interface, analytics, and user experience are fully functional and demonstrate the complete feature set! 🚀
+
+---
+
 ## 🌟 **Overview**
 
 **Sustainable Smart Home** is a comprehensive energy management platform that empowers homeowners to monitor, optimize, and control their home's energy ecosystem. Track solar generation, battery storage, EV charging, and grid interaction in real-time while maximizing savings and minimizing environmental impact.
@@ -265,15 +269,6 @@ All API responses follow this structure:
 
 ---
 
-## 🌍 **Environment Variables**
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL | ✅ |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous API key | ✅ |
-| `NODE_ENV` | Environment (development/production) | ❌ |
-
----
 
 ## 🚀 **Deployment**
 

@@ -18,7 +18,6 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { TopNav } from "@/components/layout/top-nav";
-import { DisclaimerBanner } from "@/components/layout/disclaimer-banner";
 
 export const metadata: Metadata = {
   title: "Sustainable Smart Home | Smart Energy Management",
@@ -28,9 +27,6 @@ export const metadata: Metadata = {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-blue-50">
-      {/* Disclaimer Banner */}
-      <DisclaimerBanner />
-
       {/* Navigation */}
       <TopNav showScrollLinks={true} />
 

@@ -248,12 +248,7 @@ All API endpoints require valid authentication. Include the session cookie or au
 - `DELETE /api/configuration/devices/[id]` - Remove device
 
 #### **Energy Data**
-- `GET /api/solar-generation-data` - Solar panel production data
-- `GET /api/house-load-data` - House energy consumption
 - `GET /api/grid-data` - Grid carbon intensity (public endpoint)
-
-#### **Database Population** 
-- `POST /api/populate-database` - Generate sample data for development
 
 ### **Response Format**
 

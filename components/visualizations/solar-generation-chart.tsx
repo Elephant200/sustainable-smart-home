@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useSolarData } from "@/lib/hooks/use-data-generation"
 
 type SolarGenerationData = {
   timestamp: string
@@ -39,40 +40,7 @@ const chartConfig = {
 
 export function SolarGenerationChart() {
   const [timeRange, setTimeRange] = React.useState("24h")
-  const [data, setData] = React.useState<SolarGenerationData[]>([])
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const response = await fetch(`/api/solar-generation-data?timeRange=${timeRange}`)
-        const result = await response.json()
-
-        if (!result.success) {
-          if (response.status === 401) {
-            setError("Please log in to view your solar data")
-          } else {
-            setError(result.error || 'Failed to fetch solar generation data')
-          }
-          setLoading(false)
-          return
-        }
-
-        setData(result.data)
-      } catch (err) {
-        console.error("Error fetching solar data:", err)
-        setError("Failed to load solar generation data")
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [timeRange])
+  const { data: rawData, loading } = useSolarData(timeRange)
 
   // Helper function to aggregate data by specified hour intervals (same as carbon intensity chart)
   const aggregateData = React.useCallback((rawData: SolarGenerationData[], intervalHours: number) => {
@@ -116,20 +84,31 @@ export function SolarGenerationChart() {
   }, [])
 
   const filteredData = React.useMemo(() => {
-    if (!data.length) return []
+    if (!rawData.length) return []
+
+    // Transform the generated data to match the expected format
+    const transformedData: SolarGenerationData[] = rawData.map(item => ({
+      timestamp: item.timestamp,
+      total_generation_kwh: item.total_generation_kwh,
+      hour: new Date(item.timestamp).toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      })
+    }))
 
     // For longer time periods, aggregate data to reduce granularity (same as carbon intensity chart)
     if (timeRange === "3m") {
       // Aggregate to 12-hour intervals for 3 months
-      return aggregateData(data, 12)
+      return aggregateData(transformedData, 12)
     } else if (timeRange === "1y") {
       // Aggregate to 1-day intervals for 1 year  
-      return aggregateData(data, 24) // 24 hours = 1 day
+      return aggregateData(transformedData, 24) // 24 hours = 1 day
     } else {
       // Return hourly data for shorter time periods
-      return data
+      return transformedData
     }
-  }, [data, timeRange, aggregateData])
+  }, [rawData, timeRange, aggregateData])
 
   const getTimeRangeLabel = (range: string) => {
     switch (range) {
@@ -210,24 +189,6 @@ export function SolarGenerationChart() {
         <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
           <div className="flex h-[250px] items-center justify-center">
             <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (error) {
-    return (
-      <Card className="pt-0">
-        <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
-          <div className="grid flex-1 gap-1">
-            <CardTitle>Solar Generation</CardTitle>
-            <CardDescription>Error loading solar generation data</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-          <div className="flex h-[250px] items-center justify-center">
-            <p className="text-destructive">Error: {error}</p>
           </div>
         </CardContent>
       </Card>

@@ -28,7 +28,8 @@ export default function Page() {
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 You&apos;ve successfully signed up. Please check your email to
-                confirm your account before signing in.
+                confirm your account before signing in. If you don&apos;t see it,
+                check your spam folder.
               </p>
               <Button asChild className="w-full">
                 <Link href="/">Return to Home</Link>

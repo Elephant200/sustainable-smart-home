@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { ProviderType } from "@/lib/adapters/types";
+
+const VALID_PROVIDER_TYPES: ProviderType[] = [
+  'simulated', 'tesla', 'enphase', 'home_assistant', 'solaredge', 'emporia'
+];
 
 export async function GET() {
   const supabase = await createClient();  
@@ -9,7 +14,6 @@ export async function GET() {
   }
 
   try {
-    // Get all active devices for the user
     const { data: devices, error: devicesError } = await supabase
       .from('devices')
       .select('*')
@@ -22,13 +26,12 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch devices" }, { status: 500 });
     }
 
-    // Get configurations for each device type
     const devicesWithConfig = await Promise.all(
       devices.map(async (device) => {
         let config = null;
 
         switch (device.type) {
-          case 'solar_array':
+          case 'solar_array': {
             const { data: solarConfig } = await supabase
               .from('solar_config')
               .select('*')
@@ -36,8 +39,8 @@ export async function GET() {
               .single();
             config = solarConfig;
             break;
-
-          case 'battery':
+          }
+          case 'battery': {
             const { data: batteryConfig } = await supabase
               .from('battery_config')
               .select('*')
@@ -45,8 +48,8 @@ export async function GET() {
               .single();
             config = batteryConfig;
             break;
-
-          case 'ev':
+          }
+          case 'ev': {
             const { data: evConfig } = await supabase
               .from('ev_config')
               .select('*')
@@ -54,23 +57,21 @@ export async function GET() {
               .single();
             config = evConfig;
             break;
-
+          }
           case 'grid':
           case 'house':
-            // No additional configuration for these device types
             break;
         }
 
         return {
           ...device,
+          provider_type: device.provider_type ?? 'simulated',
           config: config || {}
         };
       })
     );
 
-    return NextResponse.json({ 
-      devices: devicesWithConfig
-    });
+    return NextResponse.json({ devices: devicesWithConfig });
 
   } catch (error) {
     console.error('Error fetching devices:', error);
@@ -86,28 +87,32 @@ export async function POST(request: Request) {
   }
 
   const requestData = await request.json();
-  const { name, type, ...config } = requestData;
+  const { name, type, provider_type, connection_config, ...config } = requestData;
 
-  // Validate required fields
   if (!name || !type) {
     return NextResponse.json({ error: "Name and type are required" }, { status: 400 });
   }
 
-  // Validate device type
   const validTypes = ['solar_array', 'battery', 'ev', 'grid', 'house'];
   if (!validTypes.includes(type)) {
     return NextResponse.json({ error: "Invalid device type" }, { status: 400 });
   }
 
+  const resolvedProvider: ProviderType =
+    provider_type && VALID_PROVIDER_TYPES.includes(provider_type)
+      ? provider_type
+      : 'simulated';
+
   try {
-    // Insert device into devices table
     const { data: device, error: deviceError } = await supabase
       .from('devices')
       .insert({
         user_id: user.id,
         name: name,
         type: type,
-        is_active: true
+        is_active: true,
+        provider_type: resolvedProvider,
+        connection_config: connection_config ?? {},
       })
       .select()
       .single();
@@ -117,11 +122,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create device" }, { status: 500 });
     }
 
-    // Insert device-specific configuration if needed
     let configError = null;
 
     switch (type) {
-      case 'solar_array':
+      case 'solar_array': {
         if (!config.panel_count || !config.output_per_panel_kw) {
           return NextResponse.json({ error: "Panel count and output per panel are required for solar arrays" }, { status: 400 });
         }
@@ -134,8 +138,8 @@ export async function POST(request: Request) {
           });
         configError = solarError;
         break;
-
-      case 'battery':
+      }
+      case 'battery': {
         if (!config.capacity_kwh || !config.max_flow_kw) {
           return NextResponse.json({ error: "Capacity and max flow are required for batteries" }, { status: 400 });
         }
@@ -152,20 +156,17 @@ export async function POST(request: Request) {
           .from('battery_state')
           .insert({
             device_id: device.id,
-            timestamp: new Date(Math.floor(Date.now() / (1000 * 60 * 60)) * (1000 * 60 * 60)), // round to nearest hour
+            timestamp: new Date(Math.floor(Date.now() / (1000 * 60 * 60)) * (1000 * 60 * 60)),
             soc_percent: 50,
             soc_kwh: config.capacity_kwh * 0.5,
           });
         if (stateError) {
           console.error('Error inserting battery state:', stateError);
-          if (!configError) {
-            configError = stateError;
-          }
+          if (!configError) configError = stateError;
         }
-
         break;
-
-      case 'ev':
+      }
+      case 'ev': {
         if (!config.battery_capacity_kwh || !config.target_charge || !config.departure_time || !config.charger_power_kw) {
           return NextResponse.json({ error: "All EV configuration fields are required" }, { status: 400 });
         }
@@ -185,27 +186,23 @@ export async function POST(request: Request) {
           .insert({
             user_id: user.id,
             device_id: device.id,
-            timestamp: new Date(Math.floor(Date.now() / (1000 * 60 * 60)) * (1000 * 60 * 60)), // round to nearest hour
+            timestamp: new Date(Math.floor(Date.now() / (1000 * 60 * 60)) * (1000 * 60 * 60)),
             soc_percent: 50,
             plugged_in: true,
           });
         if (evStateError) {
           console.error('Error inserting ev state:', evStateError);
-          if (!configError) {
-            configError = evStateError;
-          }
+          if (!configError) configError = evStateError;
         }
         break;
-
+      }
       case 'grid':
       case 'house':
-        // No additional configuration needed for grid and house devices
         break;
     }
 
     if (configError) {
       console.error('Error inserting device config:', configError);
-      // Clean up the device if config insertion failed
       await supabase.from('devices').delete().eq('id', device.id);
       return NextResponse.json({ error: "Failed to create device configuration" }, { status: 500 });
     }
@@ -216,6 +213,7 @@ export async function POST(request: Request) {
         id: device.id,
         name: device.name,
         type: device.type,
+        provider_type: resolvedProvider,
         ...config
       }
     });
@@ -224,4 +222,4 @@ export async function POST(request: Request) {
     console.error('Error creating device:', error);
     return NextResponse.json({ error: "Failed to create device" }, { status: 500 });
   }
-} 
+}

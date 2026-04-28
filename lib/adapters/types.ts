@@ -1,0 +1,111 @@
+export type ProviderType =
+  | 'simulated'
+  | 'tesla'
+  | 'enphase'
+  | 'home_assistant'
+  | 'solaredge'
+  | 'emporia';
+
+export type DeviceKind = 'solar_array' | 'battery' | 'ev' | 'grid' | 'house';
+
+export interface DeviceRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  type: DeviceKind;
+  is_active: boolean;
+  provider_type: ProviderType;
+  connection_config: Record<string, unknown>;
+  solar_config?: {
+    panel_count: number;
+    output_per_panel_kw: number;
+  };
+  battery_config?: {
+    capacity_kwh: number;
+    max_flow_kw: number;
+  };
+  ev_config?: {
+    battery_capacity_kwh: number;
+    target_charge: number;
+    departure_time: string;
+    charger_power_kw: number;
+  };
+}
+
+export interface DeviceStatus {
+  deviceId: string;
+  providerType: ProviderType;
+  timestamp: Date;
+  solarOutputKw?: number;
+  batterySOCPercent?: number;
+  batterySOCKwh?: number;
+  batteryPowerKw?: number;
+  evSOCPercent?: number;
+  evChargeRateKw?: number;
+  evPluggedIn?: boolean;
+  houseLoadKw?: number;
+  gridImportKw?: number;
+  gridCarbonIntensity?: number;
+  isLive: boolean;
+}
+
+export interface HistoricalPoint {
+  timestamp: Date;
+  value: number;
+  unit: string;
+}
+
+export interface DeviceCommand {
+  type:
+    | 'set_charge_limit'
+    | 'set_discharge_limit'
+    | 'set_target_soc'
+    | 'custom';
+  payload: Record<string, unknown>;
+}
+
+export interface ConnectionFieldSchema {
+  key: string;
+  label: string;
+  type: 'text' | 'password' | 'url' | 'select';
+  placeholder?: string;
+  required: boolean;
+  options?: { label: string; value: string }[];
+  helpText?: string;
+}
+
+export interface ConnectionSchema {
+  providerType: ProviderType;
+  displayName: string;
+  description: string;
+  authMethod:
+    | 'none'
+    | 'api_key'
+    | 'bearer_token'
+    | 'local_token'
+    | 'oauth2_pkce'
+    | 'oauth2'
+    | 'username_password';
+  fields: ConnectionFieldSchema[];
+  setupInstructions?: string;
+}
+
+export interface DeviceAdapter {
+  readonly providerType: ProviderType;
+
+  getStatus(): Promise<DeviceStatus>;
+
+  getHistory(
+    metric: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<HistoricalPoint[]>;
+
+  sendCommand(
+    command: DeviceCommand
+  ): Promise<{ success: boolean; message?: string }>;
+
+  getConnectionSchema(): ConnectionSchema;
+
+  isConfigured(): boolean;
+}

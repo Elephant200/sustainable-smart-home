@@ -8,6 +8,17 @@ CREATE TYPE "public"."device_type" AS ENUM (
 
 ALTER TYPE "public"."device_type" OWNER TO "postgres";
 
+CREATE TYPE "public"."provider_type" AS ENUM (
+    'simulated',
+    'tesla',
+    'enphase',
+    'home_assistant',
+    'solaredge',
+    'emporia'
+);
+
+ALTER TYPE "public"."provider_type" OWNER TO "postgres";
+
 CREATE TYPE "public"."resolution" AS ENUM (
     '1hr',
     '6hr',
@@ -53,12 +64,18 @@ CREATE TABLE IF NOT EXISTS "public"."devices" (
     "name" "text" NOT NULL,
     "type" "public"."device_type" NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "is_active" boolean DEFAULT true NOT NULL
+    "is_active" boolean DEFAULT true NOT NULL,
+    "provider_type" "public"."provider_type" DEFAULT 'simulated' NOT NULL,
+    "connection_config" "jsonb" DEFAULT '{}'::"jsonb" NOT NULL
 );
 
 ALTER TABLE "public"."devices" OWNER TO "postgres";
 
 COMMENT ON TABLE "public"."devices" IS 'Lists each energy-relevant device (solar array, battery, EV, etc.) a user has.';
+
+COMMENT ON COLUMN "public"."devices"."provider_type" IS 'Which real-hardware provider this device maps to, or "simulated" for demo data.';
+
+COMMENT ON COLUMN "public"."devices"."connection_config" IS 'AES-256-GCM encrypted JSON blob containing provider-specific credentials. Format: { "__encrypted": "iv:authTag:ciphertext" }. Never returned to the client; decrypted server-side only. Encryption key: CONNECTION_CONFIG_SECRET environment variable.';
 
 CREATE TABLE IF NOT EXISTS "public"."carbon_thresholds" (
   "user_id" uuid DEFAULT "auth"."uid"() NOT NULL,
@@ -200,6 +217,8 @@ ALTER TABLE ONLY "public"."solar_config"
     ADD CONSTRAINT "solar_config_pkey" PRIMARY KEY ("device_id");
 
 CREATE INDEX "idx_battery_state_timestamp" ON "public"."battery_state" USING "btree" ("timestamp");
+
+CREATE INDEX "idx_devices_provider_type" ON "public"."devices" USING "btree" ("user_id", "provider_type");
 
 CREATE INDEX "idx_ev_sessions_user_time" ON "public"."ev_charge_sessions" USING "btree" ("user_id", "timestamp");
 

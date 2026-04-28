@@ -33,6 +33,7 @@ import {
   DeviceRecord,
   DeviceStatus,
   HistoricalPoint,
+  HistoryRange,
   ConnectionSchema,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
@@ -104,21 +105,17 @@ export class HomeAssistantAdapter implements DeviceAdapter {
     return { ...simStatus, providerType: 'home_assistant', isLive: false };
   }
 
-  async getHistory(
-    metric: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<HistoricalPoint[]> {
+  async getHistory(range: HistoryRange): Promise<HistoricalPoint[]> {
     if (!this.isConfigured()) {
-      return this.fallback.getHistory(metric, startDate, endDate);
+      return this.fallback.getHistory(range);
     }
 
     /**
      * LIVE IMPLEMENTATION:
      *
      * const cfg = this.device.connection_config as HaConnectionConfig;
-     * const start = startDate.toISOString();
-     * const end   = endDate.toISOString();
+     * const start = range.startDate.toISOString();
+     * const end   = range.endDate.toISOString();
      * const url = `${cfg.base_url}/api/history/period/${start}` +
      *             `?filter_entity_id=${cfg.entity_id}&end_time=${end}&minimal_response=true`;
      * const res = await fetch(url, { headers: { Authorization: `Bearer ${cfg.token}` } });
@@ -131,7 +128,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
      * }));
      */
 
-    return this.fallback.getHistory(metric, startDate, endDate);
+    return this.fallback.getHistory(range);
   }
 
   async sendCommand(

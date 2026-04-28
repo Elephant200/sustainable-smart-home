@@ -55,6 +55,16 @@ export interface HistoricalPoint {
   unit: string;
 }
 
+/**
+ * Range argument for getHistory(). A single object parameter keeps the
+ * interface extensible (new fields can be added without breaking callers).
+ */
+export interface HistoryRange {
+  metric: string;
+  startDate: Date;
+  endDate: Date;
+}
+
 export interface DeviceCommand {
   type:
     | 'set_charge_limit'
@@ -95,11 +105,11 @@ export interface DeviceAdapter {
 
   getStatus(): Promise<DeviceStatus>;
 
-  getHistory(
-    metric: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<HistoricalPoint[]>;
+  /**
+   * Retrieve historical time-series data for a device metric.
+   * @param range - Contains metric name, startDate, and endDate.
+   */
+  getHistory(range: HistoryRange): Promise<HistoricalPoint[]>;
 
   sendCommand(
     command: DeviceCommand

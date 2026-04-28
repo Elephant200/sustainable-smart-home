@@ -4,6 +4,7 @@ import {
   DeviceRecord,
   DeviceStatus,
   HistoricalPoint,
+  HistoryRange,
   ConnectionSchema,
 } from './types';
 import {
@@ -85,11 +86,9 @@ export class SimulatedAdapter implements DeviceAdapter {
     return status;
   }
 
-  async getHistory(
-    metric: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<HistoricalPoint[]> {
+  async getHistory(range: HistoryRange): Promise<HistoricalPoint[]> {
+    const { startDate, endDate } = range;
+
     switch (this.device.type) {
       case 'solar_array': {
         const cfg = this.device.solar_config;

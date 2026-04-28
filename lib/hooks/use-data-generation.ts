@@ -151,7 +151,11 @@ export function useSolarData(timeRange: string) {
 
       for (const device of devicesToUse) {
         const adapter = createAdapter(device);
-        const history = await adapter.getHistory('solar', startDate, now);
+        const history = await adapter.getHistory({
+          metric: 'solar',
+          startDate,
+          endDate: now,
+        });
 
         for (const pt of history) {
           const existing = allPoints.find(
@@ -211,7 +215,11 @@ export function useHouseLoadData(timeRange: string) {
       };
 
       const adapter = createAdapter(houseDevice);
-      const history = await adapter.getHistory('house_load', startDate, now);
+      const history = await adapter.getHistory({
+        metric: 'house_load',
+        startDate,
+        endDate: now,
+      });
 
       const points: HouseLoadDataPoint[] = history.map((pt) => ({
         timestamp: pt.timestamp.toISOString(),

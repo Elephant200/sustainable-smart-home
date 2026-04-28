@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { ProviderType } from "@/lib/adapters/types";
+import {
+  encryptConnectionConfig,
+} from "@/lib/crypto/connection-config";
+
+const VALID_PROVIDER_TYPES: ProviderType[] = [
+  'simulated', 'tesla', 'enphase', 'home_assistant', 'solaredge', 'emporia'
+];
 
 export async function PUT(
   request: Request,
@@ -13,7 +21,7 @@ export async function PUT(
 
   const deviceId = (await params).id;
   const requestData = await request.json();
-  const { name, type, ...config } = requestData;
+  const { name, type, provider_type, connection_config, ...config } = requestData;
 
   // Validate required fields
   if (!name || !type) {
@@ -33,13 +41,29 @@ export async function PUT(
       return NextResponse.json({ error: "Device not found" }, { status: 404 });
     }
 
-    // Update device name and type
+    const resolvedProvider: ProviderType =
+      provider_type && VALID_PROVIDER_TYPES.includes(provider_type)
+        ? provider_type
+        : (existingDevice.provider_type ?? 'simulated');
+
+    const updatePayload: Record<string, unknown> = {
+      name,
+      type,
+      provider_type: resolvedProvider,
+    };
+
+    if (
+      connection_config !== undefined &&
+      typeof connection_config === 'object' &&
+      connection_config !== null &&
+      Object.keys(connection_config).length > 0
+    ) {
+      updatePayload.connection_config = encryptConnectionConfig(connection_config);
+    }
+
     const { error: deviceError } = await supabase
       .from('devices')
-      .update({
-        name: name,
-        type: type
-      })
+      .update(updatePayload)
       .eq('id', deviceId)
       .eq('user_id', user.id);
 
@@ -111,8 +135,9 @@ export async function PUT(
       message: "Device updated successfully",
       device: {
         id: deviceId,
-        name: name,
-        type: type,
+        name,
+        type,
+        provider_type: resolvedProvider,
         ...config
       }
     });

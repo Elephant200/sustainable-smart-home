@@ -31,6 +31,7 @@ import {
   DeviceRecord,
   DeviceStatus,
   HistoricalPoint,
+  HistoryRange,
   ConnectionSchema,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
@@ -96,22 +97,19 @@ export class EmporiaAdapter implements DeviceAdapter {
     return { ...simStatus, providerType: 'emporia', isLive: false };
   }
 
-  async getHistory(
-    metric: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<HistoricalPoint[]> {
+  async getHistory(range: HistoryRange): Promise<HistoricalPoint[]> {
     if (!this.isConfigured()) {
-      return this.fallback.getHistory(metric, startDate, endDate);
+      return this.fallback.getHistory(range);
     }
 
     /**
      * LIVE IMPLEMENTATION:
      * Use the getDeviceListUsages endpoint with scale=1HR over the requested range.
      * See https://github.com/magico13/PyEmVue for example usage patterns.
+     * Reference range.startDate and range.endDate for the time window.
      */
 
-    return this.fallback.getHistory(metric, startDate, endDate);
+    return this.fallback.getHistory(range);
   }
 
   async sendCommand(

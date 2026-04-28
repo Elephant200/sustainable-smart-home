@@ -23,6 +23,7 @@ import {
   DeviceRecord,
   DeviceStatus,
   HistoricalPoint,
+  HistoryRange,
   ConnectionSchema,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
@@ -77,13 +78,9 @@ export class SolarEdgeAdapter implements DeviceAdapter {
     return { ...simStatus, providerType: 'solaredge', isLive: false };
   }
 
-  async getHistory(
-    metric: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<HistoricalPoint[]> {
+  async getHistory(range: HistoryRange): Promise<HistoricalPoint[]> {
     if (!this.isConfigured()) {
-      return this.fallback.getHistory(metric, startDate, endDate);
+      return this.fallback.getHistory(range);
     }
 
     /**
@@ -93,7 +90,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
      * const fmt = (d: Date) => d.toISOString().split('T')[0];
      * const res = await fetch(
      *   `https://monitoringapi.solaredge.com/site/${cfg.site_id}/energy` +
-     *   `?timeUnit=HOUR&startDate=${fmt(startDate)}&endDate=${fmt(endDate)}&api_key=${cfg.api_key}`
+     *   `?timeUnit=HOUR&startDate=${fmt(range.startDate)}&endDate=${fmt(range.endDate)}&api_key=${cfg.api_key}`
      * );
      * const json = await res.json();
      * return json.energy.values
@@ -105,7 +102,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
      *   }));
      */
 
-    return this.fallback.getHistory(metric, startDate, endDate);
+    return this.fallback.getHistory(range);
   }
 
   async sendCommand(

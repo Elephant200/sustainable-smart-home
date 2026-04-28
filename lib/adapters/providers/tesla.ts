@@ -26,6 +26,7 @@ import {
   DeviceRecord,
   DeviceStatus,
   HistoricalPoint,
+  HistoryRange,
   ConnectionSchema,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
@@ -81,13 +82,9 @@ export class TeslaAdapter implements DeviceAdapter {
     return { ...simStatus, providerType: 'tesla', isLive: false };
   }
 
-  async getHistory(
-    metric: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<HistoricalPoint[]> {
+  async getHistory(range: HistoryRange): Promise<HistoricalPoint[]> {
     if (!this.isConfigured()) {
-      return this.fallback.getHistory(metric, startDate, endDate);
+      return this.fallback.getHistory(range);
     }
 
     /**
@@ -96,7 +93,7 @@ export class TeslaAdapter implements DeviceAdapter {
      * const cfg = this.device.connection_config as { access_token: string; site_id: string };
      * const res = await fetch(
      *   `https://fleet-api.prd.na.vn.cloud.tesla.com/api/1/energy_sites/${cfg.site_id}/history` +
-     *   `?kind=power&period=day&start_date=${startDate.toISOString()}&end_date=${endDate.toISOString()}`,
+     *   `?kind=power&period=day&start_date=${range.startDate.toISOString()}&end_date=${range.endDate.toISOString()}`,
      *   { headers: { Authorization: `Bearer ${cfg.access_token}` } }
      * );
      * const json = await res.json();
@@ -107,7 +104,7 @@ export class TeslaAdapter implements DeviceAdapter {
      * }));
      */
 
-    return this.fallback.getHistory(metric, startDate, endDate);
+    return this.fallback.getHistory(range);
   }
 
   async sendCommand(

@@ -26,6 +26,7 @@ import {
   DeviceRecord,
   DeviceStatus,
   HistoricalPoint,
+  HistoryRange,
   ConnectionSchema,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
@@ -77,21 +78,17 @@ export class EnphaseAdapter implements DeviceAdapter {
     return { ...simStatus, providerType: 'enphase', isLive: false };
   }
 
-  async getHistory(
-    metric: string,
-    startDate: Date,
-    endDate: Date
-  ): Promise<HistoricalPoint[]> {
+  async getHistory(range: HistoryRange): Promise<HistoricalPoint[]> {
     if (!this.isConfigured()) {
-      return this.fallback.getHistory(metric, startDate, endDate);
+      return this.fallback.getHistory(range);
     }
 
     /**
      * LIVE IMPLEMENTATION:
      *
      * const cfg = this.device.connection_config as { api_key: string; access_token: string; system_id: string };
-     * const start_at = Math.floor(startDate.getTime() / 1000);
-     * const end_at   = Math.floor(endDate.getTime() / 1000);
+     * const start_at = Math.floor(range.startDate.getTime() / 1000);
+     * const end_at   = Math.floor(range.endDate.getTime() / 1000);
      * const res = await fetch(
      *   `https://api.enphaseenergy.com/api/v4/systems/${cfg.system_id}/telemetry/production_micro` +
      *   `?key=${cfg.api_key}&start_at=${start_at}&granularity=day`,
@@ -105,7 +102,7 @@ export class EnphaseAdapter implements DeviceAdapter {
      * }));
      */
 
-    return this.fallback.getHistory(metric, startDate, endDate);
+    return this.fallback.getHistory(range);
   }
 
   async sendCommand(

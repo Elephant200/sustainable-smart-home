@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import { ProviderType } from "@/lib/adapters/types";
+import {
+  encryptConnectionConfig,
+  maskForClient,
+} from "@/lib/crypto/connection-config";
 
 const VALID_PROVIDER_TYPES: ProviderType[] = [
   'simulated', 'tesla', 'enphase', 'home_assistant', 'solaredge', 'emporia'
@@ -66,6 +70,7 @@ export async function GET() {
         return {
           ...device,
           provider_type: device.provider_type ?? 'simulated',
+          connection_config: maskForClient(device.connection_config ?? {}),
           config: config || {}
         };
       })
@@ -103,6 +108,12 @@ export async function POST(request: Request) {
       ? provider_type
       : 'simulated';
 
+  const encryptedConfig = encryptConnectionConfig(
+    typeof connection_config === 'object' && connection_config !== null
+      ? connection_config
+      : {}
+  );
+
   try {
     const { data: device, error: deviceError } = await supabase
       .from('devices')
@@ -112,7 +123,7 @@ export async function POST(request: Request) {
         type: type,
         is_active: true,
         provider_type: resolvedProvider,
-        connection_config: connection_config ?? {},
+        connection_config: encryptedConfig,
       })
       .select()
       .single();

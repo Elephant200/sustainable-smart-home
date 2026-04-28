@@ -95,11 +95,11 @@ export function PasswordChangeCard() {
           </div>
           
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           )}
           
           {message && (
-            <p className="text-sm text-green-600">{message}</p>
+            <p className="text-sm text-primary">{message}</p>
           )}
           
           <Button type="submit" disabled={isLoading} className="w-full">

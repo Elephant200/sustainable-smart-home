@@ -62,15 +62,15 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Zap className="h-5 w-5 text-yellow-500" />
+              <Zap className="h-5 w-5 text-chart-1" />
               Energy Flow
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">{systemStats.solarCurrent.toFixed(1)} kW</div>
+            <div className="text-3xl font-bold text-chart-1">{systemStats.solarCurrent.toFixed(1)} kW</div>
             <div className="text-sm text-muted-foreground">Current solar generation</div>
             <div className="mt-2 text-sm">
-              <span className="text-blue-600 font-semibold">+{systemStats.batteryStored} kWh</span> stored
+              <span className="text-chart-2 font-semibold">+{systemStats.batteryStored} kWh</span> stored
             </div>
           </CardContent>
         </Card>
@@ -78,13 +78,13 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
+              <DollarSign className="h-5 w-5 text-primary" />
               Monthly Savings
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">${systemStats.totalMonthlySavings.toLocaleString()}</div>
-            <div className="text-sm text-green-600">+18% vs last month</div>
+            <div className="text-3xl font-bold text-primary">${systemStats.totalMonthlySavings.toLocaleString()}</div>
+            <div className="text-sm text-primary">+18% vs last month</div>
             <div className="mt-2 text-sm text-muted-foreground">
               ${(systemStats.totalMonthlySavings * 12).toLocaleString()} annual
             </div>
@@ -94,14 +94,14 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Leaf className="h-5 w-5 text-emerald-500" />
+              <Leaf className="h-5 w-5 text-primary" />
               Carbon Impact
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">{systemStats.carbonReduced} tons</div>
+            <div className="text-3xl font-bold text-primary">{systemStats.carbonReduced} tons</div>
             <div className="text-sm text-muted-foreground">CO₂ reduced this month</div>
-            <div className="mt-2 text-sm text-emerald-600">
+            <div className="mt-2 text-sm text-primary">
               {(systemStats.carbonReduced * 12).toFixed(1)} tons/year
             </div>
           </CardContent>
@@ -110,12 +110,12 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Target className="h-5 w-5 text-purple-500" />
+              <Target className="h-5 w-5 text-chart-5" />
               Grid Independence
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">{systemStats.gridIndependence}%</div>
+            <div className="text-3xl font-bold text-chart-5">{systemStats.gridIndependence}%</div>
             <div className="text-sm text-muted-foreground">Energy self-sufficiency</div>
             <Progress value={systemStats.gridIndependence} className="mt-2" />
           </CardContent>
@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Uptime</span>
-              <Badge variant="default" className="bg-green-100 text-green-800">99.2%</Badge>
+              <Badge variant="default" className="bg-primary/15 text-primary">99.2%</Badge>
             </div>
           </CardContent>
         </Card>
@@ -190,7 +190,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Health Score</span>
-              <Badge variant="default" className="bg-blue-100 text-blue-800">98%</Badge>
+              <Badge variant="default" className="bg-chart-2/15 text-chart-2">98%</Badge>
             </div>
           </CardContent>
         </Card>
@@ -218,7 +218,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Smart Charging</span>
-              <Badge variant="default" className="bg-purple-100 text-purple-800">Active</Badge>
+              <Badge variant="default" className="bg-chart-5/15 text-chart-5">Active</Badge>
             </div>
           </CardContent>
         </Card>
@@ -280,28 +280,28 @@ export default function AnalyticsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
                 <span className="text-sm">70% Grid Independence</span>
               </div>
-              <Badge variant="default" className="bg-green-100 text-green-800">Achieved</Badge>
+              <Badge variant="default" className="bg-primary/15 text-primary">Achieved</Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-primary rounded-full"></div>
                 <span className="text-sm">5 tons CO₂ Reduced</span>
               </div>
-              <Badge variant="default" className="bg-green-100 text-green-800">Achieved</Badge>
+              <Badge variant="default" className="bg-primary/15 text-primary">Achieved</Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                <div className="w-2 h-2 bg-warning rounded-full"></div>
                 <span className="text-sm">$40K Annual Savings</span>
               </div>
               <Badge variant="outline">In Progress</Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                <div className="w-2 h-2 bg-muted-foreground/40 rounded-full"></div>
                 <span className="text-sm">80% Grid Independence</span>
               </div>
               <Badge variant="outline">Upcoming</Badge>
@@ -319,19 +319,19 @@ export default function AnalyticsPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-yellow-600">57.4 MWh</div>
+              <div className="text-3xl font-bold text-chart-1">57.4 MWh</div>
               <div className="text-sm text-muted-foreground">Solar Generated</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">$21,512</div>
+              <div className="text-3xl font-bold text-primary">$21,512</div>
               <div className="text-sm text-muted-foreground">Total Savings</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-emerald-600">31.7 tons</div>
+              <div className="text-3xl font-bold text-primary">31.7 tons</div>
               <div className="text-sm text-muted-foreground">Carbon Avoided</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">98.4%</div>
+              <div className="text-3xl font-bold text-chart-2">98.4%</div>
               <div className="text-sm text-muted-foreground">System Uptime</div>
             </div>
           </div>

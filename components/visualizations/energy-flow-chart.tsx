@@ -48,7 +48,7 @@ const chartConfig = {
   },
   ev: {
     label: "EV Charging",
-    color: "hsl(var(--chart-3))",
+    color: "hsl(var(--chart-5))",
   },
   grid: {
     label: "Grid Exchange",

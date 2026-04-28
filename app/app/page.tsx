@@ -67,26 +67,26 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Sun className="h-5 w-5 text-yellow-500" />
+              <Sun className="h-5 w-5 text-chart-1" />
               Solar
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{systemStats.solarCurrent} kW</div>
+            <div className="text-2xl font-bold text-chart-1">{systemStats.solarCurrent} kW</div>
             <div className="text-sm text-muted-foreground">Generating now</div>
-            <div className="text-xs text-green-600 mt-1">{systemStats.solarDaily} kWh today</div>
+            <div className="text-xs text-primary mt-1">{systemStats.solarDaily} kWh today</div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Battery className="h-5 w-5 text-blue-500" />
+              <Battery className="h-5 w-5 text-chart-2" />
               Battery
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{systemStats.batteryCharge}%</div>
+            <div className="text-2xl font-bold text-chart-2">{systemStats.batteryCharge}%</div>
             <div className="text-sm text-muted-foreground">+{systemStats.batteryPower} kW</div>
             <Progress value={systemStats.batteryCharge} className="mt-2 h-1" />
           </CardContent>
@@ -95,28 +95,28 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Car className="h-5 w-5 text-purple-500" />
+              <Car className="h-5 w-5 text-chart-5" />
               EV
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{systemStats.evPower} kW</div>
+            <div className="text-2xl font-bold text-chart-5">{systemStats.evPower} kW</div>
             <div className="text-sm text-muted-foreground">BMW i4 charging</div>
-            <div className="text-xs text-blue-600 mt-1">{systemStats.evCharge}% charged</div>
+            <div className="text-xs text-chart-2 mt-1">{systemStats.evCharge}% charged</div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
+              <DollarSign className="h-5 w-5 text-primary" />
               Savings
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">${systemStats.dailySavings}</div>
+            <div className="text-2xl font-bold text-primary">${systemStats.dailySavings}</div>
             <div className="text-sm text-muted-foreground">Today</div>
-            <div className="text-xs text-green-600 mt-1">${systemStats.monthlySavings} this month</div>
+            <div className="text-xs text-primary mt-1">${systemStats.monthlySavings} this month</div>
           </CardContent>
         </Card>
       </div>
@@ -155,7 +155,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Grid Export</span>
-              <span className="font-semibold text-green-600">{Math.abs(systemStats.gridPower)} kW</span>
+              <span className="font-semibold text-primary">{Math.abs(systemStats.gridPower)} kW</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Self-Sufficiency</span>
@@ -172,21 +172,21 @@ export default function DashboardPage() {
             </CardTitle>
             <CardDescription>Current system health</CardDescription>
             <CardAction>
-              <Badge variant="default" className="bg-green-100 text-green-800">Optimal</Badge>
+              <Badge variant="default" className="bg-primary/15 text-primary">Optimal</Badge>
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm">System Health</span>
-              <span className="font-semibold text-green-600">{systemStats.systemHealth}%</span>
+              <span className="font-semibold text-primary">{systemStats.systemHealth}%</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Active Alerts</span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700">{systemStats.activeAlerts}</Badge>
+              <Badge variant="outline" className="bg-chart-2/10 text-chart-2">{systemStats.activeAlerts}</Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">CO₂ Reduced</span>
-              <span className="font-semibold text-emerald-600">{systemStats.carbonReduced} tons/mo</span>
+              <span className="font-semibold text-primary">{systemStats.carbonReduced} tons/mo</span>
             </div>
           </CardContent>
         </Card>

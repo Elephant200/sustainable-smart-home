@@ -147,11 +147,11 @@ const notifications = [
 function NotificationCard({ notification }: { notification: typeof notifications[0] }) {
   const getTypeColor = (type: string) => {
     switch (type) {
-      case "success": return "text-green-600 bg-green-50 border-green-200";
-      case "warning": return "text-yellow-600 bg-yellow-50 border-yellow-200";
-      case "error": return "text-red-600 bg-red-50 border-red-200";
-      case "info": return "text-blue-600 bg-blue-50 border-blue-200";
-      default: return "text-gray-600 bg-gray-50 border-gray-200";
+      case "success": return "text-primary bg-primary/10 border-primary/30";
+      case "warning": return "text-warning bg-warning/10 border-warning/30";
+      case "error": return "text-destructive bg-destructive/10 border-destructive/30";
+      case "info": return "text-chart-2 bg-chart-2/10 border-chart-2/30";
+      default: return "text-muted-foreground bg-muted/40 border-border";
     }
   };
 
@@ -168,7 +168,7 @@ function NotificationCard({ notification }: { notification: typeof notifications
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
       case "high": return <Badge variant="destructive">High</Badge>;
-      case "medium": return <Badge variant="default" className="bg-yellow-100 text-yellow-800 border-yellow-200">Medium</Badge>;
+      case "medium": return <Badge variant="default" className="bg-warning/15 text-warning border-warning/30">Medium</Badge>;
       case "low": return <Badge variant="outline">Low</Badge>;
       default: return <Badge variant="outline">Normal</Badge>;
     }
@@ -229,12 +229,12 @@ export default function AlertsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Bell className="h-5 w-5 text-blue-500" />
+              <Bell className="h-5 w-5 text-chart-2" />
               Active Alerts
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{activeNotifications.length}</div>
+            <div className="text-3xl font-bold text-chart-2">{activeNotifications.length}</div>
             <div className="text-sm text-muted-foreground">Require attention</div>
           </CardContent>
         </Card>
@@ -242,12 +242,12 @@ export default function AlertsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5 text-green-500" />
+              <Clock className="h-5 w-5 text-primary" />
               Today&apos;s Events
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">8</div>
+            <div className="text-3xl font-bold text-primary">8</div>
             <div className="text-sm text-muted-foreground">System events</div>
           </CardContent>
         </Card>
@@ -255,12 +255,12 @@ export default function AlertsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              <AlertTriangle className="h-5 w-5 text-chart-1" />
               Priority Items
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">{priorityNotifications.length}</div>
+            <div className="text-3xl font-bold text-chart-1">{priorityNotifications.length}</div>
             <div className="text-sm text-muted-foreground">High/Medium priority</div>
           </CardContent>
         </Card>
@@ -268,12 +268,12 @@ export default function AlertsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Shield className="h-5 w-5 text-purple-500" />
+              <Shield className="h-5 w-5 text-chart-5" />
               System Health
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">98%</div>
+            <div className="text-3xl font-bold text-primary">98%</div>
             <div className="text-sm text-muted-foreground">All systems optimal</div>
           </CardContent>
         </Card>

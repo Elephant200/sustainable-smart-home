@@ -94,21 +94,21 @@ export default async function SettingsPage() {
                         <span className="text-sm font-medium">EV Charging Alerts</span>
                         <div className="text-xs text-muted-foreground">Notifications for charging start, completion, and issues</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-sm font-medium">Battery Status</span>
                         <div className="text-xs text-muted-foreground">Battery charge level and health updates</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-sm font-medium">Solar Performance</span>
                         <div className="text-xs text-muted-foreground">Solar generation and efficiency alerts</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
@@ -122,7 +122,7 @@ export default async function SettingsPage() {
                         <span className="text-sm font-medium">Maintenance Reminders</span>
                         <div className="text-xs text-muted-foreground">Scheduled maintenance and cleaning alerts</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
                     </div>
                   </div>
                 </div>
@@ -135,21 +135,21 @@ export default async function SettingsPage() {
                         <span className="text-sm font-medium">Efficiency Warnings</span>
                         <div className="text-xs text-muted-foreground">System efficiency drops below threshold</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-sm font-medium">Weather Impact</span>
                         <div className="text-xs text-muted-foreground">Weather conditions affecting solar generation</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-sm font-medium">Grid Events</span>
                         <div className="text-xs text-muted-foreground">Power outages and grid connection status</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
                     </div>
                   </div>
                 </div>
@@ -162,14 +162,14 @@ export default async function SettingsPage() {
                         <span className="text-sm font-medium">Primary Contact</span>
                         <div className="text-xs text-muted-foreground">+1 (555) 123-4567</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Active</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-sm font-medium">Backup Contact</span>
                         <div className="text-xs text-muted-foreground">+1 (555) 987-6543</div>
                       </div>
-                      <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+                      <Badge variant="default" className="bg-primary/15 text-primary">Active</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                       <div>

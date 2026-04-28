@@ -156,11 +156,11 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-muted">
-            {device.type === 'solar_array' && <Sun className="h-4 w-4 text-orange-500" />}
-            {device.type === 'battery' && <Battery className="h-4 w-4 text-green-500" />}
-            {device.type === 'ev' && <Car className="h-4 w-4 text-blue-500" />}
-            {device.type === 'grid' && <Zap className="h-4 w-4 text-yellow-500" />}
-            {device.type === 'house' && <Home className="h-4 w-4 text-purple-500" />}
+            {device.type === 'solar_array' && <Sun className="h-4 w-4 text-chart-1" />}
+            {device.type === 'battery' && <Battery className="h-4 w-4 text-chart-2" />}
+            {device.type === 'ev' && <Car className="h-4 w-4 text-chart-5" />}
+            {device.type === 'grid' && <Zap className="h-4 w-4 text-chart-3" />}
+            {device.type === 'house' && <Home className="h-4 w-4 text-chart-4" />}
           </div>
           <div>
             <h4 className="font-medium">{device.name}</h4>
@@ -190,7 +190,7 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
             variant="outline"
             size="sm"
             onClick={() => handleDeleteDevice(device)}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -206,7 +206,7 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Sun className="h-5 w-5 text-orange-500" />
+              <Sun className="h-5 w-5 text-chart-1" />
               Solar Arrays
             </h3>
             {totalSolarOutput > 0 && (
@@ -237,7 +237,7 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Battery className="h-5 w-5 text-green-500" />
+              <Battery className="h-5 w-5 text-chart-2" />
               Batteries
             </h3>
             {totalBatteryCapacity > 0 && (
@@ -268,7 +268,7 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Car className="h-5 w-5 text-blue-500" />
+              <Car className="h-5 w-5 text-chart-5" />
               Electric Vehicles
             </h3>
             {evDevices.length > 0 && (
@@ -299,7 +299,7 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Zap className="h-5 w-5 text-yellow-500" />
+              <Zap className="h-5 w-5 text-chart-3" />
               Grid Connection
             </h3>
             <p className="text-sm text-muted-foreground">
@@ -330,7 +330,7 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold flex items-center gap-2">
-              <Home className="h-5 w-5 text-purple-500" />
+              <Home className="h-5 w-5 text-chart-4" />
               House Monitor
             </h3>
             <p className="text-sm text-muted-foreground">

@@ -47,17 +47,17 @@ const evVehicles = [
 function EVStatusCard({ vehicle }: { vehicle: typeof evVehicles[0] }) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "charging": return "text-green-600 bg-green-50 border-green-200";
-      case "completed": return "text-blue-600 bg-blue-50 border-blue-200";
-      case "disconnected": return "text-gray-600 bg-gray-50 border-gray-200";
-      default: return "text-gray-600 bg-gray-50 border-gray-200";
+      case "charging": return "text-primary bg-primary/10 border-primary/30";
+      case "completed": return "text-chart-2 bg-chart-2/10 border-chart-2/30";
+      case "disconnected": return "text-muted-foreground bg-muted/40 border-border";
+      default: return "text-muted-foreground bg-muted/40 border-border";
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "charging": return <Badge className="bg-green-100 text-green-800 border-green-200">Charging</Badge>;
-      case "completed": return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Completed</Badge>;
+      case "charging": return <Badge className="bg-primary/15 text-primary border-primary/30">Charging</Badge>;
+      case "completed": return <Badge className="bg-chart-2/15 text-chart-2 border-chart-2/30">Completed</Badge>;
       case "disconnected": return <Badge variant="outline">Disconnected</Badge>;
       default: return <Badge variant="outline">Unknown</Badge>;
     }
@@ -131,12 +131,12 @@ export default function EVChargingPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Zap className="h-5 w-5 text-yellow-500" />
+              <Zap className="h-5 w-5 text-chart-1" />
               Current Charging
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">{totalPowerCurrently.toFixed(1)} kW</div>
+            <div className="text-3xl font-bold text-chart-1">{totalPowerCurrently.toFixed(1)} kW</div>
             <div className="text-sm text-muted-foreground">
               {evVehicles.filter(ev => ev.chargingStatus === "charging").length} vehicle(s) charging
             </div>
@@ -146,12 +146,12 @@ export default function EVChargingPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Battery className="h-5 w-5 text-blue-500" />
+              <Battery className="h-5 w-5 text-chart-2" />
               Energy Used (24h)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{totalEnergyUsedOvernight} kWh</div>
+            <div className="text-3xl font-bold text-chart-2">{totalEnergyUsedOvernight} kWh</div>
             <div className="text-sm text-muted-foreground">Overnight charging</div>
           </CardContent>
         </Card>
@@ -159,25 +159,25 @@ export default function EVChargingPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
+              <DollarSign className="h-5 w-5 text-primary" />
               Cost Savings
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">${costSavings}</div>
-            <div className="text-sm text-green-600">vs peak rate charging</div>
+            <div className="text-3xl font-bold text-primary">${costSavings}</div>
+            <div className="text-sm text-primary">vs peak rate charging</div>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Leaf className="h-5 w-5 text-emerald-500" />
+              <Leaf className="h-5 w-5 text-primary" />
               Clean Energy
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-emerald-600">73%</div>
+            <div className="text-3xl font-bold text-primary">73%</div>
             <div className="text-sm text-muted-foreground">Solar + battery powered</div>
           </CardContent>
         </Card>
@@ -214,15 +214,15 @@ export default function EVChargingPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Tesla Model 3</span>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">10:00 PM - 6:00 AM</Badge>
+                <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">10:00 PM - 6:00 AM</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">BMW i4</span>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">11:00 PM - 1:00 PM</Badge>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">11:00 PM - 1:00 PM</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Priority Mode</span>
-                <Badge variant="default" className="bg-purple-100 text-purple-800">Solar First</Badge>
+                <Badge variant="default" className="bg-chart-5/15 text-chart-5">Solar First</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Off-Peak Hours</span>
@@ -255,7 +255,7 @@ export default function EVChargingPage() {
                 <span className="font-semibold">42.8 kWh (27%)</span>
               </div>
               <div className="mt-4 p-3 bg-muted rounded-lg">
-                <div className="text-sm font-semibold text-green-600">
+                <div className="text-sm font-semibold text-primary">
                   73% renewable energy used
                 </div>
               </div>
@@ -273,19 +273,19 @@ export default function EVChargingPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">4.2 MWh</div>
+              <div className="text-3xl font-bold text-chart-2">4.2 MWh</div>
               <div className="text-sm text-muted-foreground">Energy Consumed</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">$287</div>
+              <div className="text-3xl font-bold text-primary">$287</div>
               <div className="text-sm text-muted-foreground">Cost Savings</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600">68%</div>
+              <div className="text-3xl font-bold text-chart-5">68%</div>
               <div className="text-sm text-muted-foreground">Solar Powered</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600">1,847</div>
+              <div className="text-3xl font-bold text-chart-3">1,847</div>
               <div className="text-sm text-muted-foreground">Miles Driven</div>
             </div>
           </div>

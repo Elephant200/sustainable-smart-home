@@ -35,7 +35,7 @@ const chartConfig = {
   },
   consumption: {
     label: "Total Consumption (MWh)",
-    color: "hsl(var(--chart-3))",
+    color: "hsl(var(--chart-5))",
   },
   savings: {
     label: "Cost Savings ($)",
@@ -43,7 +43,7 @@ const chartConfig = {
   },
   carbonReduced: {
     label: "Carbon Reduced (tons)",
-    color: "hsl(var(--chart-4))",
+    color: "hsl(var(--chart-3))",
   },
 } satisfies ChartConfig
 

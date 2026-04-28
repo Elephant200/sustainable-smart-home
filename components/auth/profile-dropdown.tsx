@@ -63,7 +63,7 @@ export function ProfileDropdown({ user }: ProfileDropdownProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           onClick={logout}
-          className="text-red-600 hover:text-red-700 focus:text-red-700"
+          className="text-destructive hover:text-destructive focus:text-destructive"
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sign out

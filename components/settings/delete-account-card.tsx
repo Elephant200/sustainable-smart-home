@@ -63,9 +63,9 @@ export function DeleteAccountCard() {
   };
 
   return (
-    <Card className="border-red-200">
+    <Card className="border-destructive/30">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-red-700">
+        <CardTitle className="flex items-center gap-2 text-destructive">
           <Trash2 className="h-5 w-5" />
           Delete Account
         </CardTitle>
@@ -115,14 +115,14 @@ export function DeleteAccountCard() {
                   placeholder="Type the confirmation text..."
                   className={`${
                     confirmationText && !isConfirmationValid 
-                      ? "border-red-500 focus:border-red-500" 
+                      ? "border-destructive focus:border-destructive" 
                       : ""
                   }`}
                 />
               </div>
               
               {error && (
-                <p className="text-sm text-red-600">{error}</p>
+                <p className="text-sm text-destructive">{error}</p>
               )}
             </div>
 

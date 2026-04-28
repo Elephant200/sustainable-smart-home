@@ -486,7 +486,7 @@ export function AddDeviceDialog({
 
   const renderConnected = () => (
     <div className="space-y-6 py-8 text-center">
-      <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+      <CheckCircle className="h-16 w-16 text-primary mx-auto" />
       <div>
         <h3 className="text-lg font-semibold mb-2">Successfully Connected!</h3>
         <p className="text-muted-foreground">

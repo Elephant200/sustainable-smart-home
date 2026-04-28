@@ -48,7 +48,7 @@ function DeviceNode({
       className="absolute transform -translate-x-1/2 -translate-y-1/2"
       style={{ left: `${position.x}%`, top: `${position.y}%` }}
     >
-      <div className={`relative w-20 h-20 rounded-full border-4 ${color} bg-white flex flex-col items-center justify-center shadow-lg hover:scale-110 transition-transform`}>
+      <div className={`relative w-20 h-20 rounded-full border-4 ${color} bg-card flex flex-col items-center justify-center shadow-lg hover:scale-110 transition-transform`}>
         <Icon className="h-6 w-6 mb-1" />
         <div className="text-xs font-bold">
           {Math.abs(data.power).toFixed(1)} kW
@@ -112,7 +112,7 @@ function PowerFlow({
         y1={startY}
         x2={endX}
         y2={endY}
-        stroke="#22c55e"
+        stroke="hsl(var(--primary))"
         strokeWidth="3"
         strokeLinecap="round"
       />
@@ -120,7 +120,7 @@ function PowerFlow({
       {/* Arrow marker */}
       <polygon
         points={`${endX-8},${endY-4} ${endX},${endY} ${endX-8},${endY+4}`}
-        fill="#22c55e"
+        fill="hsl(var(--primary))"
       />
       
       {/* Power Label */}
@@ -130,7 +130,7 @@ function PowerFlow({
         width="60"
         height="24"
       >
-        <div className="flex items-center justify-center bg-white rounded-full px-2 py-1 border shadow-sm">
+        <div className="flex items-center justify-center bg-card rounded-full px-2 py-1 border shadow-sm">
           <span className="text-xs font-semibold">
             {displayPower.toFixed(1)} kW
           </span>
@@ -176,7 +176,7 @@ export function EnergyFlowDiagram() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="relative h-96 bg-gradient-to-br from-blue-50 to-green-50 rounded-lg border overflow-hidden">
+        <div className="relative h-96 bg-gradient-to-br from-chart-2/10 to-primary/10 rounded-lg border overflow-hidden">
           {/* Grid lines for visual appeal */}
           <div className="absolute inset-0 opacity-20">
             <div className="h-full w-full" style={{
@@ -209,50 +209,50 @@ export function EnergyFlowDiagram() {
             device="solar" 
             icon={Sun} 
             position={positions.solar} 
-            color="border-yellow-500 text-yellow-600"
+            color="border-chart-1 text-chart-1"
           />
           <DeviceNode 
             device="battery" 
             icon={Battery} 
             position={positions.battery} 
-            color="border-blue-500 text-blue-600"
+            color="border-chart-2 text-chart-2"
           />
           <DeviceNode 
             device="house" 
             icon={Home} 
             position={positions.house} 
-            color="border-green-500 text-green-600"
+            color="border-chart-4 text-chart-4"
           />
           <DeviceNode 
             device="ev" 
             icon={Car} 
             position={positions.ev} 
-            color="border-purple-500 text-purple-600"
+            color="border-chart-5 text-chart-5"
           />
           <DeviceNode 
             device="grid" 
             icon={Zap} 
             position={positions.grid} 
-            color="border-orange-500 text-orange-600"
+            color="border-chart-3 text-chart-3"
           />
 
           {/* Legend */}
-          <div className="absolute bottom-4 left-4 bg-white rounded-lg p-3 shadow-sm border">
+          <div className="absolute bottom-4 left-4 bg-card rounded-lg p-3 shadow-sm border">
             <div className="text-xs font-semibold mb-2">Legend</div>
             <div className="space-y-1 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-0.5 bg-green-500 rounded-full"></div>
+                <div className="w-4 h-0.5 bg-primary rounded-full"></div>
                 <span>Power Flow</span>
               </div>
               <div className="flex items-center gap-2">
-                <ArrowRight className="h-3 w-3 text-green-600" />
+                <ArrowRight className="h-3 w-3 text-primary" />
                 <span>Direction & Power</span>
               </div>
             </div>
           </div>
 
           {/* System Summary */}
-          <div className="absolute bottom-4 right-4 bg-white rounded-lg p-3 shadow-sm border">
+          <div className="absolute bottom-4 right-4 bg-card rounded-lg p-3 shadow-sm border">
             <div className="text-xs font-semibold mb-2">System Total</div>
             <div className="space-y-1 text-xs">
               <div>Generation: {energyFlowData.solar.power.toFixed(1)} kW</div>

@@ -26,16 +26,16 @@ const avgHealth = Math.round(batteryModules.reduce((sum, module) => sum + module
 
 function BatteryModuleIcon({ module }: { module: typeof batteryModules[0] }) {
   const getChargeColor = (charge: number) => {
-    if (charge >= 80) return "text-green-600 bg-green-50 border-green-200";
-    if (charge >= 60) return "text-blue-600 bg-blue-50 border-blue-200";
-    if (charge >= 40) return "text-yellow-600 bg-yellow-50 border-yellow-200";
-    return "text-orange-600 bg-orange-50 border-orange-200";
+    if (charge >= 80) return "text-primary bg-primary/10 border-primary/30";
+    if (charge >= 60) return "text-chart-2 bg-chart-2/10 border-chart-2/30";
+    if (charge >= 40) return "text-warning bg-warning/10 border-warning/30";
+    return "text-chart-3 bg-chart-3/10 border-chart-3/30";
   };
 
   const getStatusIcon = (status: string) => {
-    if (status === "charging") return <ArrowUp className="h-3 w-3 text-green-600" />;
-    if (status === "discharging") return <ArrowDown className="h-3 w-3 text-orange-600" />;
-    return <Zap className="h-3 w-3 text-gray-600" />;
+    if (status === "charging") return <ArrowUp className="h-3 w-3 text-primary" />;
+    if (status === "discharging") return <ArrowDown className="h-3 w-3 text-chart-3" />;
+    return <Zap className="h-3 w-3 text-muted-foreground" />;
   };
 
   return (
@@ -49,7 +49,7 @@ function BatteryModuleIcon({ module }: { module: typeof batteryModules[0] }) {
           <span>{module.power.toFixed(1)} kW</span>
         </div>
         <Progress value={module.charge} className="w-full h-1" />
-        <div className="absolute -top-2 -left-2 bg-white rounded-full px-2 py-1 text-xs font-semibold border shadow-sm">
+        <div className="absolute -top-2 -left-2 bg-card rounded-full px-2 py-1 text-xs font-semibold border shadow-sm">
           #{module.id}
         </div>
       </div>
@@ -74,12 +74,12 @@ export default function BatteryPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Battery className="h-5 w-5 text-blue-500" />
+              <Battery className="h-5 w-5 text-chart-2" />
               State of Charge
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{avgCharge}%</div>
+            <div className="text-3xl font-bold text-chart-2">{avgCharge}%</div>
             <div className="text-sm text-muted-foreground">{totalStoredEnergy.toFixed(1)} kWh stored</div>
             <Progress value={avgCharge} className="mt-2" />
           </CardContent>
@@ -88,13 +88,13 @@ export default function BatteryPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Zap className="h-5 w-5 text-green-500" />
+              <Zap className="h-5 w-5 text-primary" />
               Power Flow
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">+{totalChargingPower.toFixed(1)} kW</div>
-            <div className="text-sm text-green-600 flex items-center gap-1">
+            <div className="text-3xl font-bold text-primary">+{totalChargingPower.toFixed(1)} kW</div>
+            <div className="text-sm text-primary flex items-center gap-1">
               <ArrowUp className="h-3 w-3" />
               Charging from solar
             </div>
@@ -104,12 +104,12 @@ export default function BatteryPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Clock className="h-5 w-5 text-purple-500" />
+              <Clock className="h-5 w-5 text-chart-5" />
               Time to Full
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-600">2.1 hrs</div>
+            <div className="text-3xl font-bold text-chart-5">2.1 hrs</div>
             <div className="text-sm text-muted-foreground">At current charge rate</div>
           </CardContent>
         </Card>
@@ -117,12 +117,12 @@ export default function BatteryPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Heart className="h-5 w-5 text-red-500" />
+              <Heart className="h-5 w-5 text-destructive" />
               System Health
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{avgHealth}%</div>
+            <div className="text-3xl font-bold text-primary">{avgHealth}%</div>
             <div className="text-sm text-muted-foreground">Excellent condition</div>
           </CardContent>
         </Card>
@@ -139,7 +139,7 @@ export default function BatteryPage() {
             Real-time status of each 13.5 kWh Powerwall unit
           </CardDescription>
           <CardAction>
-            <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
+            <Badge variant="default" className="bg-primary/15 text-primary border-primary/30">
               All Systems Charging
             </Badge>
           </CardAction>
@@ -187,7 +187,7 @@ export default function BatteryPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Net Storage</span>
-                <span className="font-semibold text-green-600">+55.5 kWh</span>
+                <span className="font-semibold text-primary">+55.5 kWh</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Efficiency</span>
@@ -213,11 +213,11 @@ export default function BatteryPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Cooling Status</span>
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Active</Badge>
+                <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">Active</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Safety Systems</span>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Normal</Badge>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">Normal</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Voltage Range</span>
@@ -244,7 +244,7 @@ export default function BatteryPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Time-of-Use Optimization</span>
-                <Badge variant="default" className="bg-green-100 text-green-800">Enabled</Badge>
+                <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Storm Watch</span>
@@ -252,7 +252,7 @@ export default function BatteryPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Peak Shaving</span>
-                <Badge variant="default" className="bg-blue-100 text-blue-800">Active</Badge>
+                <Badge variant="default" className="bg-chart-2/15 text-chart-2">Active</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Grid Services</span>
@@ -282,11 +282,11 @@ export default function BatteryPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Backup Mode</span>
-                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Ready</Badge>
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Ready</Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Grid Connection</span>
-                <Badge variant="default" className="bg-green-100 text-green-800">Online</Badge>
+                <Badge variant="default" className="bg-primary/15 text-primary">Online</Badge>
               </div>
             </div>
           </CardContent>
@@ -302,19 +302,19 @@ export default function BatteryPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">6.8 MWh</div>
+              <div className="text-3xl font-bold text-chart-2">6.8 MWh</div>
               <div className="text-sm text-muted-foreground">Energy Stored</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600">$892</div>
+              <div className="text-3xl font-bold text-primary">$892</div>
               <div className="text-sm text-muted-foreground">Peak Shaving Savings</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600">98.1%</div>
+              <div className="text-3xl font-bold text-chart-5">98.1%</div>
               <div className="text-sm text-muted-foreground">Round-trip Efficiency</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600">127</div>
+              <div className="text-3xl font-bold text-chart-3">127</div>
               <div className="text-sm text-muted-foreground">Cycles Completed</div>
             </div>
           </div>

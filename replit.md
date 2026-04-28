@@ -28,7 +28,8 @@ Preferred communication style: Simple, everyday language.
 - **Icons**: Lucide React
 - **Charts/Visualizations**: Recharts wrapped in shadcn `ChartContainer`
 - **Animations**: Framer Motion for page transitions and route progress bar
-- **Fonts**: Inter (sans) + Fraunces (display) via `next/font/google`
+- **Fonts**: Inter (sans) + Fraunces (display, serif headings) via `next/font/google`
+- **Design language**: "Organic & earthy" — forest greens (primary), terra cotta (accent), warm linen/cream surfaces in light mode, deep soil with bioluminescent accents in dark mode. All UI uses semantic tokens (`primary`, `accent`, `chart-1..5`, `destructive`, `warning`, `secondary`, `muted`) defined in `app/globals.css`; hardcoded Tailwind palette classes (e.g. `text-green-600`, `bg-blue-100`) are not used.
 
 **Route structure**:
 - `/` — Public landing page (`app/page.tsx`)

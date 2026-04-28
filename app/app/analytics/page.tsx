@@ -1,13 +1,11 @@
-import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { DollarSign, Leaf, BarChart3, Zap, Sun, Battery, Car, Target, Award } from "lucide-react";
-import { EnergyFlowChart } from "@/components/visualizations/energy-flow-chart";
-import { MonthlyTrendsChart } from "@/components/visualizations/monthly-trends-chart";
-import { CostSavingsChart } from "@/components/visualizations/cost-savings-chart";
-import { SkeletonChartCard } from "@/components/ui/skeleton";
+import { EnergyFlowChart } from "@/components/visualizations/energy-flow-chart-lazy";
+import { MonthlyTrendsChart } from "@/components/visualizations/monthly-trends-chart-lazy";
+import { CostSavingsChart } from "@/components/visualizations/cost-savings-chart-lazy";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -122,19 +120,13 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Energy Flow Chart */}
-      <Suspense fallback={<SkeletonChartCard height={280} />}>
-        <EnergyFlowChart />
-      </Suspense>
+      {/* Energy Flow Chart (lazy-loaded; skeleton handled by dynamic loader) */}
+      <EnergyFlowChart />
 
-      {/* Charts Row */}
+      {/* Charts Row (lazy-loaded; skeletons handled by dynamic loaders) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Suspense fallback={<SkeletonChartCard height={300} />}>
-          <MonthlyTrendsChart />
-        </Suspense>
-        <Suspense fallback={<SkeletonChartCard height={300} />}>
-          <CostSavingsChart />
-        </Suspense>
+        <MonthlyTrendsChart />
+        <CostSavingsChart />
       </div>
 
       {/* System Performance Breakdown */}

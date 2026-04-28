@@ -7,7 +7,7 @@ import { Zap, Activity, Settings2, Sun, Battery, Car, DollarSign } from "lucide-
 import type { Metadata } from "next";
 import { CarbonIntensityChart } from "@/components/visualizations/carbon-intensity-chart";
 import { HouseLoadChart } from "@/components/visualizations/house-load-chart";
-import { EnergyFlowDiagram } from "@/components/visualizations/energy-flow-diagram";
+import { EnergyFlowDiagram } from "@/components/visualizations/energy-flow-diagram-lazy";
 import { SkeletonChartCard } from "@/components/ui/skeleton";
 import Link from "next/link";
 
@@ -121,10 +121,8 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Real-Time Energy Flow Diagram */}
-      <Suspense fallback={<SkeletonChartCard height={320} />}>
-        <EnergyFlowDiagram />
-      </Suspense>
+      {/* Real-Time Energy Flow Diagram (lazy-loaded; skeleton handled by dynamic loader) */}
+      <EnergyFlowDiagram />
 
       {/* Carbon Intensity Chart - No redundant card */}
       <Suspense fallback={<SkeletonChartCard height={250} />}>

@@ -22,11 +22,11 @@ import {
 const chartConfig = {
   teslaModel3: {
     label: "Tesla Model 3",
-    color: "hsl(221, 83%, 53%)", // Blue
+    color: "hsl(var(--chart-2))", // Blue
   },
   bmwI4: {
     label: "BMW i4", 
-    color: "hsl(142, 76%, 36%)", // Green
+    color: "hsl(var(--chart-4))", // Green
   },
 } satisfies ChartConfig
 

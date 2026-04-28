@@ -30,11 +30,11 @@ const costSavingsData = [
 const chartConfig = {
   amount: {
     label: "Savings Amount",
-    color: "hsl(142, 76%, 36%)",
+    color: "hsl(var(--chart-4))",
   },
   percentage: {
     label: "Percentage",
-    color: "hsl(142, 76%, 36%)",
+    color: "hsl(var(--chart-4))",
   },
 } satisfies ChartConfig
 

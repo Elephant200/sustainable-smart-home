@@ -36,23 +36,23 @@ const energyFlowData = [
 const chartConfig = {
   solar: {
     label: "Solar Generation",
-    color: "hsl(45, 93%, 47%)",
+    color: "hsl(var(--chart-1))",
   },
   battery: {
     label: "Battery Storage",
-    color: "hsl(221, 83%, 53%)",
+    color: "hsl(var(--chart-2))",
   },
   house: {
     label: "House Load",
-    color: "hsl(142, 76%, 36%)",
+    color: "hsl(var(--chart-4))",
   },
   ev: {
     label: "EV Charging",
-    color: "hsl(262, 83%, 58%)",
+    color: "hsl(var(--chart-3))",
   },
   grid: {
     label: "Grid Exchange",
-    color: "hsl(12, 76%, 61%)",
+    color: "hsl(var(--chart-3))",
   },
 } satisfies ChartConfig
 

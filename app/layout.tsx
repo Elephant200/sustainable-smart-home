@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Inter, Fraunces } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
@@ -16,10 +16,17 @@ export const metadata: Metadata = {
   description: "Build a smarter, greener future for your home",
 };
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-sans",
   display: "swap",
   subsets: ["latin"],
+});
+
+const fraunces = Fraunces({
+  variable: "--font-display",
+  display: "swap",
+  subsets: ["latin"],
+  axes: ["opsz", "SOFT"],
 });
 
 export default function RootLayout({
@@ -29,7 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.className} antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

@@ -31,19 +31,19 @@ const monthlyTrendsData = [
 const chartConfig = {
   solarGeneration: {
     label: "Solar Generation (MWh)",
-    color: "hsl(45, 93%, 47%)",
+    color: "hsl(var(--chart-1))",
   },
   consumption: {
     label: "Total Consumption (MWh)",
-    color: "hsl(262, 83%, 58%)",
+    color: "hsl(var(--chart-3))",
   },
   savings: {
     label: "Cost Savings ($)",
-    color: "hsl(142, 76%, 36%)",
+    color: "hsl(var(--chart-4))",
   },
   carbonReduced: {
     label: "Carbon Reduced (tons)",
-    color: "hsl(142, 76%, 36%)",
+    color: "hsl(var(--chart-4))",
   },
 } satisfies ChartConfig
 

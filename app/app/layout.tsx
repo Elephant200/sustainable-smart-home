@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardSidenav } from "@/components/layout/dashboard-sidenav";
 import { DashboardWrapper } from "@/components/layout/dashboard-wrapper";
+import { PageTransition } from "@/components/layout/page-transition";
+import { RouteProgress } from "@/components/layout/route-progress";
 
 export default async function DashboardLayout({
   children,
@@ -16,11 +18,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
+      <RouteProgress />
       <DashboardSidenav />
       <div className="flex-1 flex flex-col">
         <DashboardWrapper user={data.user}>
-          {children}
+          <PageTransition>{children}</PageTransition>
         </DashboardWrapper>
       </div>
     </div>

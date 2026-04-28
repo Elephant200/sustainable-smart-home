@@ -8,10 +8,10 @@ interface TopNavProps {
 
 const TopNav = ({ showScrollLinks = false }: TopNavProps) => {
   return (
-    <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16 sticky top-0 z-50 bg-white/80 backdrop-blur-md">
+    <nav className="w-full flex justify-center border-b border-border/60 h-16 sticky top-0 z-50 bg-background/80 backdrop-blur-md">
       <div className="w-full max-w-7xl flex justify-between items-center p-3 px-5 text-sm">
-        <div className="flex gap-5 items-center font-semibold">
-          <Link href={"/#home"} className="flex items-center gap-2">
+        <div className="flex gap-5 items-center font-display text-base">
+          <Link href={"/#home"} className="flex items-center gap-2 text-foreground">
             <Image 
               src="/favicon.ico" 
               alt="Sustainable Smart Home" 
@@ -25,11 +25,11 @@ const TopNav = ({ showScrollLinks = false }: TopNavProps) => {
 
         {/* Scroll Navigation for Landing Page */}
         {showScrollLinks && (
-          <div className="hidden md:flex space-x-8">
-            <a href="#features" className="text-gray-600 hover:text-green-600 transition-colors">Features</a>
-            <a href="#how-it-works" className="text-gray-600 hover:text-green-600 transition-colors">How It Works</a>
-            <a href="#benefits" className="text-gray-600 hover:text-green-600 transition-colors">Benefits</a>
-            <a href="#about" className="text-gray-600 hover:text-green-600 transition-colors">About</a>
+          <div className="hidden md:flex space-x-8 font-sans text-sm">
+            <a href="#features" className="text-muted-foreground hover:text-primary transition-colors">Features</a>
+            <a href="#how-it-works" className="text-muted-foreground hover:text-primary transition-colors">How It Works</a>
+            <a href="#benefits" className="text-muted-foreground hover:text-primary transition-colors">Benefits</a>
+            <a href="#about" className="text-muted-foreground hover:text-primary transition-colors">About</a>
           </div>
         )}
 

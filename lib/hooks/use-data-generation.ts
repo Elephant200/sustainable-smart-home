@@ -47,7 +47,6 @@ export function useUserDevices() {
             type,
             is_active,
             provider_type,
-            connection_config,
             solar_config (
               panel_count,
               output_per_panel_kw
@@ -65,7 +64,7 @@ export function useUserDevices() {
           type: device.type,
           is_active: device.is_active,
           provider_type: (device.provider_type ?? 'simulated') as ProviderType,
-          connection_config: (device.connection_config ?? {}) as Record<string, unknown>,
+          connection_config: {},
           solar_config: Array.isArray(device.solar_config)
             ? device.solar_config[0]
             : device.solar_config || undefined,

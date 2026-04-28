@@ -67,6 +67,8 @@ export async function PUT(
       updatePayload.connection_config = encryptConnectionConfig(
         connection_config as Record<string, unknown>
       );
+    } else if (resolvedProvider !== existingDevice.provider_type) {
+      updatePayload.connection_config = {};
     }
 
     const { error: deviceError } = await supabase

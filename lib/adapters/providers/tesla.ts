@@ -28,6 +28,7 @@ import {
   HistoricalPoint,
   HistoryRange,
   ConnectionSchema,
+  hasStoredCredentials,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
 
@@ -42,11 +43,10 @@ export class TeslaAdapter implements DeviceAdapter {
   }
 
   isConfigured(): boolean {
-    const cfg = this.device.connection_config as {
-      access_token?: string;
-      site_id?: string;
-    };
-    return !!(cfg.access_token && cfg.site_id);
+    return hasStoredCredentials(this.device.connection_config, [
+      'access_token',
+      'site_id',
+    ]);
   }
 
   async getStatus(): Promise<DeviceStatus> {

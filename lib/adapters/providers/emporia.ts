@@ -33,6 +33,7 @@ import {
   HistoricalPoint,
   HistoryRange,
   ConnectionSchema,
+  hasStoredCredentials,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
 
@@ -47,12 +48,11 @@ export class EmporiaAdapter implements DeviceAdapter {
   }
 
   isConfigured(): boolean {
-    const cfg = this.device.connection_config as {
-      username?: string;
-      password?: string;
-      device_gid?: string;
-    };
-    return !!(cfg.username && cfg.password && cfg.device_gid);
+    return hasStoredCredentials(this.device.connection_config, [
+      'username',
+      'password',
+      'device_gid',
+    ]);
   }
 
   async getStatus(): Promise<DeviceStatus> {

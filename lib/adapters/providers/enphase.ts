@@ -28,6 +28,7 @@ import {
   HistoricalPoint,
   HistoryRange,
   ConnectionSchema,
+  hasStoredCredentials,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
 
@@ -42,12 +43,11 @@ export class EnphaseAdapter implements DeviceAdapter {
   }
 
   isConfigured(): boolean {
-    const cfg = this.device.connection_config as {
-      api_key?: string;
-      access_token?: string;
-      system_id?: string;
-    };
-    return !!(cfg.api_key && cfg.access_token && cfg.system_id);
+    return hasStoredCredentials(this.device.connection_config, [
+      'api_key',
+      'access_token',
+      'system_id',
+    ]);
   }
 
   async getStatus(): Promise<DeviceStatus> {

@@ -35,6 +35,7 @@ import {
   HistoricalPoint,
   HistoryRange,
   ConnectionSchema,
+  hasStoredCredentials,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
 
@@ -56,8 +57,11 @@ export class HomeAssistantAdapter implements DeviceAdapter {
   }
 
   isConfigured(): boolean {
-    const cfg = this.device.connection_config as HaConnectionConfig;
-    return !!(cfg.base_url && cfg.token && cfg.entity_id);
+    return hasStoredCredentials(this.device.connection_config, [
+      'base_url',
+      'token',
+      'entity_id',
+    ]);
   }
 
   private toKw(value: number, unit: string): number {

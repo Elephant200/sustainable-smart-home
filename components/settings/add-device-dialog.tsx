@@ -81,7 +81,7 @@ export function AddDeviceDialog({
         }
         setFormData({ name: editingDevice.name, ...configData });
         setSelectedProvider((editingDevice.provider_type as ProviderType) ?? 'simulated');
-        setConnectionConfig((editingDevice.connection_config as Record<string, string>) ?? {});
+        setConnectionConfig({});
       } else {
         const generateName = (type: DeviceType): string => {
           const typeNames: Record<DeviceType, string> = {
@@ -441,6 +441,11 @@ export function AddDeviceDialog({
 
             {activeSchema.fields.length > 0 && (
               <div className="space-y-3">
+                {editingDevice?.connection_config?.is_configured === true && (
+                  <div className="p-2 bg-muted/40 border rounded-md text-xs text-muted-foreground">
+                    Credentials are already stored securely. Leave fields blank to keep existing credentials, or enter new values to replace them.
+                  </div>
+                )}
                 {activeSchema.fields.map(renderProviderField)}
               </div>
             )}

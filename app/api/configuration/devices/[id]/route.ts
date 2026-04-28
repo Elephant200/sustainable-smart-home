@@ -52,13 +52,21 @@ export async function PUT(
       provider_type: resolvedProvider,
     };
 
-    if (
-      connection_config !== undefined &&
+    const isMaskedPlaceholder =
       typeof connection_config === 'object' &&
       connection_config !== null &&
-      Object.keys(connection_config).length > 0
-    ) {
-      updatePayload.connection_config = encryptConnectionConfig(connection_config);
+      'is_configured' in connection_config;
+
+    const hasNewCredentials =
+      !isMaskedPlaceholder &&
+      typeof connection_config === 'object' &&
+      connection_config !== null &&
+      Object.keys(connection_config).length > 0;
+
+    if (hasNewCredentials) {
+      updatePayload.connection_config = encryptConnectionConfig(
+        connection_config as Record<string, unknown>
+      );
     }
 
     const { error: deviceError } = await supabase

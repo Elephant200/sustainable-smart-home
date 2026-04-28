@@ -100,6 +100,25 @@ export interface ConnectionSchema {
   setupInstructions?: string;
 }
 
+/**
+ * Returns true if a connection_config object indicates that credentials have
+ * been stored, regardless of whether the calling context is client-side
+ * (masked form) or server-side (encrypted form or plain fields).
+ *
+ * - Client GET response: { is_configured: true }
+ * - Server DB row:       { __encrypted: "iv:tag:ciphertext" }
+ * - Dev/test plain:      { some_field: "value", ... }
+ */
+export function hasStoredCredentials(
+  cfg: Record<string, unknown>,
+  requiredFields: string[]
+): boolean {
+  if (cfg.is_configured === true) return true;
+  if (typeof cfg.__encrypted === 'string' && cfg.__encrypted.length > 0)
+    return true;
+  return requiredFields.every((f) => typeof cfg[f] === 'string' && !!cfg[f]);
+}
+
 export interface DeviceAdapter {
   readonly providerType: ProviderType;
 

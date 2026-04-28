@@ -25,6 +25,7 @@ import {
   HistoricalPoint,
   HistoryRange,
   ConnectionSchema,
+  hasStoredCredentials,
 } from '../types';
 import { SimulatedAdapter } from '../simulated';
 
@@ -39,11 +40,10 @@ export class SolarEdgeAdapter implements DeviceAdapter {
   }
 
   isConfigured(): boolean {
-    const cfg = this.device.connection_config as {
-      api_key?: string;
-      site_id?: string;
-    };
-    return !!(cfg.api_key && cfg.site_id);
+    return hasStoredCredentials(this.device.connection_config, [
+      'api_key',
+      'site_id',
+    ]);
   }
 
   async getStatus(): Promise<DeviceStatus> {

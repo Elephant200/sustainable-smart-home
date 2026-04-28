@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import type { Metadata } from "next";
 import { CarbonIntensityChart } from "@/components/visualizations/carbon-intensity-chart";
 import { HouseLoadChart } from "@/components/visualizations/house-load-chart";
 import { EnergyFlowDiagram } from "@/components/visualizations/energy-flow-diagram";
+import { SkeletonChartCard } from "@/components/ui/skeleton";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -120,13 +122,19 @@ export default function DashboardPage() {
       </div>
 
       {/* Real-Time Energy Flow Diagram */}
-      <EnergyFlowDiagram />
+      <Suspense fallback={<SkeletonChartCard height={320} />}>
+        <EnergyFlowDiagram />
+      </Suspense>
 
       {/* Carbon Intensity Chart - No redundant card */}
-      <CarbonIntensityChart />
+      <Suspense fallback={<SkeletonChartCard height={250} />}>
+        <CarbonIntensityChart />
+      </Suspense>
 
       {/* House Energy Load Chart */}
-      <HouseLoadChart />
+      <Suspense fallback={<SkeletonChartCard height={250} />}>
+        <HouseLoadChart />
+      </Suspense>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>

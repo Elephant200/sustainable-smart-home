@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { DollarSign, Leaf, BarChart3, Zap, Sun, Battery, Car, Target, Award } fr
 import { EnergyFlowChart } from "@/components/visualizations/energy-flow-chart";
 import { MonthlyTrendsChart } from "@/components/visualizations/monthly-trends-chart";
 import { CostSavingsChart } from "@/components/visualizations/cost-savings-chart";
+import { SkeletonChartCard } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -121,12 +123,18 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Energy Flow Chart */}
-      <EnergyFlowChart />
+      <Suspense fallback={<SkeletonChartCard height={280} />}>
+        <EnergyFlowChart />
+      </Suspense>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MonthlyTrendsChart />
-        <CostSavingsChart />
+        <Suspense fallback={<SkeletonChartCard height={300} />}>
+          <MonthlyTrendsChart />
+        </Suspense>
+        <Suspense fallback={<SkeletonChartCard height={300} />}>
+          <CostSavingsChart />
+        </Suspense>
       </div>
 
       {/* System Performance Breakdown */}

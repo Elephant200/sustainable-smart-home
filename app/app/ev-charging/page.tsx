@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Car, Calendar, Zap, DollarSign, Battery, Leaf, Settings } from "lucide-react";
 import { EVChargingChart } from "@/components/visualizations/ev-charging-chart";
+import { SkeletonChartCard } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -182,7 +184,9 @@ export default function EVChargingPage() {
       </div>
 
       {/* Overnight Charging Chart */}
-      <EVChargingChart />
+      <Suspense fallback={<SkeletonChartCard height={300} />}>
+        <EVChargingChart />
+      </Suspense>
 
       {/* Individual Vehicle Status */}
       <div className="space-y-4">

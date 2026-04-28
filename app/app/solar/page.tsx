@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sun, TrendingUp, CloudSun, Battery, Zap, Leaf, DollarSign } from "lucide-react";
 import type { Metadata } from "next";
 import { SolarGenerationChart } from "@/components/visualizations/solar-generation-chart";
+import { SkeletonChartCard } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
   title: "Solar Power",
@@ -120,7 +122,9 @@ export default function SolarPage() {
       </div>
 
       {/* Solar Generation Chart */}
-      <SolarGenerationChart />
+      <Suspense fallback={<SkeletonChartCard height={300} />}>
+        <SolarGenerationChart />
+      </Suspense>
 
       {/* Individual Solar Panels */}
       <Card>

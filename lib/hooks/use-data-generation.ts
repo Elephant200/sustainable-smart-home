@@ -39,9 +39,7 @@ export function useUserDevices() {
           return;
         }
 
-        const { data: devicesData, error: devicesError } = await supabase
-          .from('devices')
-          .select(`
+        const fullSelect = `
             id,
             name,
             type,
@@ -51,29 +49,76 @@ export function useUserDevices() {
               panel_count,
               output_per_panel_kw
             )
-          `)
+          `;
+        const fallbackSelect = `
+            id,
+            name,
+            type,
+            is_active,
+            solar_config (
+              panel_count,
+              output_per_panel_kw
+            )
+          `;
+
+        let { data: devicesData, error: devicesError } = await supabase
+          .from('devices')
+          .select(fullSelect)
           .eq('user_id', user.id)
           .eq('is_active', true);
 
+        if (devicesError) {
+          const msg = (devicesError.message || '').toLowerCase();
+          const missingColumn =
+            msg.includes('provider_type') ||
+            devicesError.code === '42703';
+
+          if (missingColumn) {
+            const retry = await supabase
+              .from('devices')
+              .select(fallbackSelect)
+              .eq('user_id', user.id)
+              .eq('is_active', true);
+            devicesData = (retry.data ?? null) as typeof devicesData;
+            devicesError = retry.error;
+          }
+        }
+
         if (devicesError) throw devicesError;
 
-        const transformed: DeviceRecord[] = (devicesData || []).map((device) => ({
-          id: device.id,
-          user_id: user.id,
-          name: device.name,
-          type: device.type,
-          is_active: device.is_active,
-          provider_type: (device.provider_type ?? 'simulated') as ProviderType,
-          connection_config: {},
-          solar_config: Array.isArray(device.solar_config)
-            ? device.solar_config[0]
-            : device.solar_config || undefined,
-        }));
+        const transformed: DeviceRecord[] = (devicesData || []).map((device) => {
+          const d = device as typeof device & { provider_type?: string | null };
+          return {
+            id: d.id,
+            user_id: user.id,
+            name: d.name,
+            type: d.type,
+            is_active: d.is_active,
+            provider_type: (d.provider_type ?? 'simulated') as ProviderType,
+            connection_config: {},
+            solar_config: Array.isArray(d.solar_config)
+              ? d.solar_config[0]
+              : d.solar_config || undefined,
+          };
+        });
 
         setDevices(transformed);
       } catch (err) {
-        console.error('Error fetching user devices:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch devices');
+        const detail =
+          err && typeof err === 'object'
+            ? {
+                message: (err as { message?: string }).message,
+                code: (err as { code?: string }).code,
+                details: (err as { details?: string }).details,
+                hint: (err as { hint?: string }).hint,
+              }
+            : err;
+        console.error('Error fetching user devices:', detail);
+        setError(
+          (err && typeof err === 'object' && 'message' in err
+            ? String((err as { message?: string }).message)
+            : null) || 'Failed to fetch devices'
+        );
       } finally {
         setLoading(false);
       }

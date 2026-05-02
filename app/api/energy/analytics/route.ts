@@ -70,11 +70,10 @@ export async function GET() {
     }
   }
 
-  // Battery health: query each battery device's adapter for its modules and
-  // average across all modules from all batteries. Module count is derived
-  // per-device (no longer hardcoded to 4) and the same code path supports
-  // real-hardware providers since they implement the same DeviceAdapter
-  // interface.
+  // Battery health: average across batteries that actually report it. We
+  // never default to a placeholder constant — when no adapter exposes
+  // health, downstream callers (UI, system-health composite) treat it as
+  // "unknown" rather than fabricating 100%.
   const batteryDevices = context.rawDevices.filter((d) => d.type === 'battery');
   let batteryHealthPct: number | null = null;
   if (batteryDevices.length > 0) {
@@ -87,20 +86,12 @@ export async function GET() {
         }).getStatus()
       )
     );
-    const allModules = statuses.flatMap((s) => s.batteryModules ?? []);
-    if (allModules.length > 0) {
+    const reported = statuses
+      .map((s) => s.batteryHealthPct)
+      .filter((v): v is number => typeof v === 'number');
+    if (reported.length > 0) {
       batteryHealthPct =
-        allModules.reduce((s, m) => s + m.health_pct, 0) / allModules.length;
-    } else {
-      // Fallback: providers that don't expose module-level data may still
-      // report an aggregate batteryHealthPct on DeviceStatus.
-      const reported = statuses
-        .map((s) => s.batteryHealthPct)
-        .filter((v): v is number => typeof v === 'number');
-      if (reported.length > 0) {
-        batteryHealthPct =
-          reported.reduce((s, v) => s + v, 0) / reported.length;
-      }
+        reported.reduce((s, v) => s + v, 0) / reported.length;
     }
   }
 
@@ -112,7 +103,7 @@ export async function GET() {
     current: currentFlow,
     todayFlows,
     solarPanelInstant,
-    batteryHealthPct: batteryHealthPct ?? 100,
+    batteryHealthPct,
     evCount: context.evConfigs.length,
   });
   const activeWarnings = alerts.filter(

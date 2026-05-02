@@ -6,13 +6,38 @@ import {
   computeHouseLoadInstant,
   RESERVE_FRACTION,
   ROUND_TRIP_EFFICIENCY_PCT,
-  BATTERY_COOLING_TEMP_THRESHOLD_F,
   healthLabel,
   backupModeLabel,
 } from '@/lib/simulation';
-import type { BatteryModule } from '@/lib/adapters/types';
 
 export const dynamic = 'force-dynamic';
+
+const HOUR_MS = 3600_000;
+const bucketHour = (d: Date) => Math.floor(d.getTime() / HOUR_MS);
+
+/**
+ * Normalize a device's history to at most one value per UTC hour by keeping
+ * the latest sample inside each hour bucket. This makes aggregation across
+ * devices safe even when adapters return different cadences (or extra
+ * samples) — without this, summing across device samples would inflate SoC
+ * and power by sample count.
+ */
+function bucketLastByHour(
+  series: { timestamp: Date; value: number }[]
+): Map<number, number> {
+  const latestTsByBucket = new Map<number, number>();
+  const valueByBucket = new Map<number, number>();
+  for (const pt of series) {
+    const k = bucketHour(pt.timestamp);
+    const ts = pt.timestamp.getTime();
+    const prev = latestTsByBucket.get(k);
+    if (prev === undefined || ts >= prev) {
+      latestTsByBucket.set(k, ts);
+      valueByBucket.set(k, pt.value);
+    }
+  }
+  return valueByBucket;
+}
 
 export async function GET() {
   const result = await loadUserContext();
@@ -25,7 +50,7 @@ export async function GET() {
   if (batteryDevices.length === 0) {
     return NextResponse.json({
       battery: null,
-      modules: [],
+      devices: [],
       history: [],
     });
   }
@@ -34,20 +59,10 @@ export async function GET() {
   const startToday = new Date(now);
   startToday.setHours(0, 0, 0, 0);
 
-  // Fan out to each battery via its adapter. The simulated adapter receives
-  // cross-device context so it can model surplus/load; real provider adapters
-  // ignore the context because their upstream API already has full site
-  // context. Either way, the route consumes only DeviceStatus and
-  // HistoricalPoint values from the adapter contract — never simulation
-  // internals — so swapping a battery's provider_type to 'tesla' or
-  // 'enphase' requires no changes here.
-  //
-  // NOTE: With 2+ simulated batteries the per-device adapter calls each see
-  // the full site surplus independently and may both claim it, inflating
-  // aggregate power. Real-hardware providers don't have this problem (they
-  // report each battery's actual measured power). Fleet-level dispatch for
-  // the simulated case is tracked as a follow-up; today's seed data has a
-  // single battery per user so this isn't user-visible.
+  // Fan out to each battery via its adapter. The route consumes only the
+  // DeviceStatus / HistoricalPoint adapter contract — never simulation
+  // internals — so swapping a battery's provider_type to 'tesla' or 'enphase'
+  // requires no changes here.
   const perDevice = await Promise.all(
     batteryDevices.map(async (device) => {
       const adapter = createAdapter(device, {
@@ -72,63 +87,76 @@ export async function GET() {
     })
   );
 
-  // Aggregate headline metrics from the adapter contract. If a provider
-  // adapter omits the optional capacity/max_flow fields, fall back to the
-  // device's stored config so the headline KPIs (SoC%, reserve, hours-to-
-  // full) never collapse to zero.
+  // Per-device cards: one entry per actual battery in the user's account.
+  // No synthetic per-module breakdown — that would be fabricating data the
+  // provider doesn't expose. Health is only included when the adapter reports
+  // it; otherwise it stays null so the UI can omit the row instead of
+  // showing a fake 100%.
   const lookupCfg = (deviceId: string) =>
     context.batteryConfigs.find((b) => b.id === deviceId);
-  const totalCapacityKwh = perDevice.reduce(
-    (s, p) =>
-      s + (p.status.batteryCapacityKwh ?? lookupCfg(p.device.id)?.capacity_kwh ?? 0),
-    0
-  );
-  const totalMaxFlowKw = perDevice.reduce(
-    (s, p) =>
-      s + (p.status.batteryMaxFlowKw ?? lookupCfg(p.device.id)?.max_flow_kw ?? 0),
-    0
-  );
-  const totalSocKwh = perDevice.reduce(
-    (s, p) => s + (p.status.batterySOCKwh ?? 0),
-    0
-  );
-  const totalPowerKw = perDevice.reduce(
-    (s, p) => s + (p.status.batteryPowerKw ?? 0),
-    0
-  );
+  const devices = perDevice.map((p) => {
+    const cfg = lookupCfg(p.device.id);
+    const capacityKwh =
+      p.status.batteryCapacityKwh ?? cfg?.capacity_kwh ?? 0;
+    const maxFlowKw = p.status.batteryMaxFlowKw ?? cfg?.max_flow_kw ?? 0;
+    const socKwh = p.status.batterySOCKwh ?? 0;
+    const powerKw = p.status.batteryPowerKw ?? 0;
+    const socPct =
+      capacityKwh > 0 ? (socKwh / capacityKwh) * 100 : 0;
+    const status: 'charging' | 'discharging' | 'idle' =
+      powerKw > 0.05 ? 'charging' : powerKw < -0.05 ? 'discharging' : 'idle';
+    return {
+      id: p.device.id,
+      name: findDeviceName(context.rawDevices, p.device.id),
+      capacity_kwh: Math.round(capacityKwh * 10) / 10,
+      max_flow_kw: maxFlowKw,
+      soc_percent: Math.round(socPct * 10) / 10,
+      soc_kwh: Math.round(socKwh * 10) / 10,
+      power_kw: Math.round(powerKw * 100) / 100,
+      status,
+      health_pct:
+        typeof p.status.batteryHealthPct === 'number'
+          ? Math.round(p.status.batteryHealthPct)
+          : null,
+    };
+  });
+
+  // Aggregate headline metrics from per-device data.
+  const totalCapacityKwh = devices.reduce((s, d) => s + d.capacity_kwh, 0);
+  const totalMaxFlowKw = devices.reduce((s, d) => s + d.max_flow_kw, 0);
+  const totalSocKwh = devices.reduce((s, d) => s + d.soc_kwh, 0);
+  const totalPowerKw = devices.reduce((s, d) => s + d.power_kw, 0);
   const aggregateSocPercent =
     totalCapacityKwh > 0 ? (totalSocKwh / totalCapacityKwh) * 100 : 0;
+  const reportedHealth = devices
+    .map((d) => d.health_pct)
+    .filter((v): v is number => typeof v === 'number');
+  const avgHealth =
+    reportedHealth.length > 0
+      ? reportedHealth.reduce((s, v) => s + v, 0) / reportedHealth.length
+      : null;
 
-  // Concatenate modules from every battery, renumbering ids so the UI shows
-  // a single contiguous list (1, 2, 3, ...).
-  const modules: BatteryModule[] = perDevice
-    .flatMap((p) => p.status.batteryModules ?? [])
-    .map((m, i) => ({ ...m, id: i + 1 }));
-
-  // Combined SoC history: bucket every series into hourly UTC buckets keyed
-  // by the timestamp's unix-hour, then sum per bucket. This works even when
-  // adapters return different cadences, missing points, or out-of-order
-  // samples — index alignment would silently mis-sum across providers.
-  const HOUR_MS = 3600_000;
-  const bucketHour = (d: Date) => Math.floor(d.getTime() / HOUR_MS);
-  const socBuckets = new Map<number, number>();
-  const powerBuckets = new Map<number, number>();
-  for (const p of perDevice) {
-    for (const pt of p.socSeries) {
-      const k = bucketHour(pt.timestamp);
-      socBuckets.set(k, (socBuckets.get(k) ?? 0) + pt.value);
-    }
-    for (const pt of p.powerSeries) {
-      const k = bucketHour(pt.timestamp);
-      powerBuckets.set(k, (powerBuckets.get(k) ?? 0) + pt.value);
-    }
-  }
+  // Combined SoC history: normalize each device's series to ONE value per
+  // UTC hour first (latest sample wins), then sum across devices per hour.
+  // This keeps stack-level SoC/power correct regardless of per-adapter
+  // cadence — index alignment or naive summation would silently inflate.
+  const perDeviceSocBuckets = perDevice.map((p) => bucketLastByHour(p.socSeries));
+  const perDevicePowerBuckets = perDevice.map((p) => bucketLastByHour(p.powerSeries));
   const allBucketKeys = Array.from(
-    new Set([...socBuckets.keys(), ...powerBuckets.keys()])
+    new Set([
+      ...perDeviceSocBuckets.flatMap((m) => Array.from(m.keys())),
+      ...perDevicePowerBuckets.flatMap((m) => Array.from(m.keys())),
+    ])
   ).sort((a, b) => a - b);
   const combinedHistory = allBucketKeys.map((k) => {
-    const sumSocKwh = socBuckets.get(k) ?? 0;
-    const sumPowerKw = powerBuckets.get(k) ?? 0;
+    const sumSocKwh = perDeviceSocBuckets.reduce(
+      (s, m) => s + (m.get(k) ?? 0),
+      0
+    );
+    const sumPowerKw = perDevicePowerBuckets.reduce(
+      (s, m) => s + (m.get(k) ?? 0),
+      0
+    );
     const socPct =
       totalCapacityKwh > 0 ? (sumSocKwh / totalCapacityKwh) * 100 : 0;
     return {
@@ -144,26 +172,6 @@ export async function GET() {
   const chargedToday = combinedHistory
     .filter((h) => h.power_kw > 0)
     .reduce((s, h) => s + h.power_kw, 0);
-
-  // Prefer per-module health when available; otherwise fall back to whatever
-  // aggregate batteryHealthPct the adapters reported, then 100. This lets
-  // real providers that don't expose module-level data still drive the
-  // headline.
-  const avgHealth =
-    modules.length > 0
-      ? modules.reduce((s, m) => s + m.health_pct, 0) / modules.length
-      : (() => {
-          const reported = perDevice
-            .map((p) => p.status.batteryHealthPct)
-            .filter((v): v is number => typeof v === 'number');
-          return reported.length > 0
-            ? reported.reduce((s, v) => s + v, 0) / reported.length
-            : 100;
-        })();
-  const avgTempF =
-    modules.length > 0
-      ? modules.reduce((s, m) => s + m.temperature_f, 0) / modules.length
-      : 70;
 
   // Critical-load estimate: average house load during the overnight backup
   // window (00:00–06:00). This is what the battery would have to support if
@@ -208,15 +216,17 @@ export async function GET() {
       id: primaryDevice.device.id,
       name: displayName,
       device_count: perDevice.length,
-      capacity_kwh: totalCapacityKwh,
+      capacity_kwh: Math.round(totalCapacityKwh * 10) / 10,
       max_flow_kw: totalMaxFlowKw,
       soc_percent: Math.round(aggregateSocPercent * 10) / 10,
       soc_kwh: Math.round(totalSocKwh * 10) / 10,
       power_kw: Math.round(totalPowerKw * 100) / 100,
       hours_to_full:
         Math.round(timeToFullHours(aggregateConfig, aggregateState) * 10) / 10,
-      health_pct: Math.round(avgHealth),
-      health_label: healthLabel(avgHealth),
+      // Health is null when no provider exposes it — the UI hides the metric
+      // rather than showing a synthetic 100%.
+      health_pct: avgHealth != null ? Math.round(avgHealth) : null,
+      health_label: avgHealth != null ? healthLabel(avgHealth) : null,
       charged_today_kwh: Math.round(chargedToday * 10) / 10,
       discharged_today_kwh: Math.round(dischargedToday * 10) / 10,
       round_trip_efficiency_pct: ROUND_TRIP_EFFICIENCY_PCT,
@@ -224,14 +234,9 @@ export async function GET() {
       reserve_kwh: Math.round(reserveKwh * 10) / 10,
       available_backup_kwh: Math.round(availableBackupKwh * 10) / 10,
       critical_load_kw: criticalLoadKw,
-      cooling_active: avgTempF >= BATTERY_COOLING_TEMP_THRESHOLD_F,
-      tou_enabled: true,
-      peak_shaving_enabled: true,
-      grid_services_enabled: totalMaxFlowKw >= 5,
       backup_mode_label: backupModeLabel(availableBackupKwh, criticalLoadKw),
-      grid_connection_label: 'Online',
     },
-    modules,
+    devices,
     history: combinedHistory.map((h) => ({
       timestamp: h.timestamp.toISOString(),
       soc_percent: Math.round(h.soc_percent * 10) / 10,

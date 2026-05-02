@@ -114,7 +114,7 @@ export interface AnalyticsResponse {
     month_over_month_savings_pct: number;
     battery_round_trip_efficiency_pct: number;
     storage_efficiency_pct: number;
-    battery_health_pct: number;
+    battery_health_pct: number | null;
     system_health_pct: number;
   };
   monthly: {
@@ -157,12 +157,7 @@ export interface SolarPanelsResponse {
     current_kw: number;
     efficiency_pct: number;
     weather_factor: number;
-    panels: {
-      panel_id: number;
-      production_kw: number;
-      efficiency_pct: number;
-      status: 'optimal' | 'good' | 'maintenance';
-    }[];
+    status: 'optimal' | 'good' | 'maintenance';
   }[];
   summary: AnalyticsResponse['summary'];
 }
@@ -171,14 +166,15 @@ export interface BatteryResponse {
   battery: {
     id: string;
     name: string;
+    device_count: number;
     capacity_kwh: number;
     max_flow_kw: number;
     soc_percent: number;
     soc_kwh: number;
     power_kw: number;
     hours_to_full: number;
-    health_pct: number;
-    health_label: string;
+    health_pct: number | null;
+    health_label: string | null;
     charged_today_kwh: number;
     discharged_today_kwh: number;
     round_trip_efficiency_pct: number;
@@ -186,21 +182,18 @@ export interface BatteryResponse {
     reserve_kwh: number;
     available_backup_kwh: number;
     critical_load_kw: number;
-    cooling_active: boolean;
-    tou_enabled: boolean;
-    peak_shaving_enabled: boolean;
-    grid_services_enabled: boolean;
     backup_mode_label: string;
-    grid_connection_label: string;
   } | null;
-  modules: {
-    id: number;
-    charge_pct: number;
+  devices: {
+    id: string;
+    name: string;
     capacity_kwh: number;
-    health_pct: number;
-    temperature_f: number;
+    max_flow_kw: number;
+    soc_percent: number;
+    soc_kwh: number;
     power_kw: number;
     status: 'charging' | 'discharging' | 'idle';
+    health_pct: number | null;
   }[];
   history: { timestamp: string; soc_percent: number; power_kw: number }[];
 }

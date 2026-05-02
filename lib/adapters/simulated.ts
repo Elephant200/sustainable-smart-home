@@ -1,5 +1,4 @@
 import {
-  BatteryModule,
   DeviceAdapter,
   DeviceCommand,
   DeviceRecord,
@@ -20,46 +19,23 @@ import {
   computeEvChargeRateKw,
   computeHouseLoadInstant,
   computeBatteryHistory,
-  getBatteryModuleCount,
   isOvernightWindow,
   solveFlows,
   type SolarArrayConfig,
   type BatteryDeviceConfig,
-  type BatteryInstantState,
   type EvDeviceConfig,
 } from '@/lib/simulation';
-
-function buildBatteryModules(
-  cfg: BatteryDeviceConfig,
-  instant: BatteryInstantState
-): BatteryModule[] {
-  const moduleCount = getBatteryModuleCount(cfg);
-  const perModuleCapacity = cfg.capacity_kwh / moduleCount;
-  const status: BatteryModule['status'] =
-    instant.power_kw > 0.05
-      ? 'charging'
-      : instant.power_kw < -0.05
-        ? 'discharging'
-        : 'idle';
-  return Array.from({ length: moduleCount }, (_, i) => {
-    const variation = 0.96 + ((i * 7919) % 100) / 2500;
-    const charge = Math.max(0, Math.min(100, instant.soc_percent * variation));
-    return {
-      id: i + 1,
-      charge_pct: Math.round(charge),
-      capacity_kwh: Math.round(perModuleCapacity * 10) / 10,
-      health_pct: 96 + (i % 4),
-      temperature_f: 70 + ((i * 13) % 6),
-      power_kw: Math.round((instant.power_kw / moduleCount) * 100) / 100,
-      status,
-    };
-  });
-}
 
 /**
  * Simulated provider — uses the deterministic physics library.
  * Optionally accepts the user's other device configs so battery/EV/grid
  * status can reflect the full system context (solar surplus, etc).
+ *
+ * NOTE: this adapter exposes only signals the underlying simulation actually
+ * computes. It does NOT synthesize per-module battery breakdowns or per-panel
+ * solar telemetry — real provider APIs (Tesla, Enphase, etc.) typically don't
+ * expose those either, and inventing them would let placeholder data leak
+ * into the dashboard. Routes consume the aggregate device status instead.
  */
 export class SimulatedAdapter implements DeviceAdapter {
   readonly providerType = 'simulated' as const;
@@ -120,7 +96,6 @@ export class SimulatedAdapter implements DeviceAdapter {
         id: this.device.id,
         capacity_kwh: this.device.battery_config.capacity_kwh,
         max_flow_kw: this.device.battery_config.max_flow_kw,
-        module_count: this.device.battery_config.module_count,
       };
     }
     return null;
@@ -162,7 +137,6 @@ export class SimulatedAdapter implements DeviceAdapter {
             id: this.device.id,
             capacity_kwh: cfg.capacity_kwh,
             max_flow_kw: cfg.max_flow_kw,
-            module_count: cfg.module_count,
           };
           const inst = computeBatteryStateAt(
             batteryCfg,
@@ -175,10 +149,12 @@ export class SimulatedAdapter implements DeviceAdapter {
           status.batteryPowerKw = inst.power_kw;
           status.batteryCapacityKwh = batteryCfg.capacity_kwh;
           status.batteryMaxFlowKw = batteryCfg.max_flow_kw;
-          const modules = buildBatteryModules(batteryCfg, inst);
-          status.batteryModules = modules;
-          status.batteryHealthPct =
-            modules.reduce((s, m) => s + m.health_pct, 0) / modules.length;
+          // Simulated batteries are modeled as factory-new units with full
+          // capacity retention. Real provider adapters (Tesla, Enphase, …)
+          // should report their own measured health value; if they don't, the
+          // route surfaces null so the UI hides the metric instead of
+          // showing a misleading constant.
+          status.batteryHealthPct = 100;
         }
         break;
       }

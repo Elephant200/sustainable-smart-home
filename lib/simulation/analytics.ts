@@ -133,7 +133,7 @@ export interface AnalyticsSummary {
   month_over_month_savings_pct: number;
   battery_round_trip_efficiency_pct: number;
   storage_efficiency_pct: number;
-  battery_health_pct: number;
+  battery_health_pct: number | null;
   system_health_pct: number;
 }
 
@@ -231,7 +231,6 @@ export function summarizeAnalytics(
     totalWeight += W_PANEL;
   }
   const systemHealthPct = Math.round(weightedSum / totalWeight);
-  const batteryHealth = systemHealth.batteryHealthPct ?? 0;
 
   return {
     solar_today_kwh: Math.round(solarToday * 10) / 10,
@@ -256,7 +255,10 @@ export function summarizeAnalytics(
     month_over_month_savings_pct: monthOverMonthPct,
     battery_round_trip_efficiency_pct: ROUND_TRIP_EFFICIENCY_PCT,
     storage_efficiency_pct: STORAGE_EFFICIENCY_PCT,
-    battery_health_pct: Math.round(batteryHealth),
+    battery_health_pct:
+      systemHealth.batteryHealthPct != null
+        ? Math.round(systemHealth.batteryHealthPct)
+        : null,
     system_health_pct: systemHealthPct,
   };
 }

@@ -52,7 +52,7 @@ export interface AlertInput {
   current: SolvedFlows;
   todayFlows: SolvedFlows[];
   solarPanelInstant?: SolarArrayInstant;
-  batteryHealthPct: number;
+  batteryHealthPct: number | null;
   evCount: number;
 }
 
@@ -209,7 +209,7 @@ export function deriveAlerts(input: AlertInput): AlertEvent[] {
     });
   }
 
-  if (batteryHealthPct < 95) {
+  if (batteryHealthPct !== null && batteryHealthPct < 95) {
     events.push({
       id: 'battery-health',
       type: 'warning',

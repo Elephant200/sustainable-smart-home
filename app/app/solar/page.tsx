@@ -3,34 +3,71 @@
 import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Sun, TrendingUp, CloudSun, Battery, Zap, Leaf, DollarSign } from "lucide-react";
 import { SolarGenerationChart } from "@/components/visualizations/solar-generation-chart";
 import { SkeletonChartCard } from "@/components/ui/skeleton";
 import { useSolarPanels } from "@/lib/hooks/use-energy-data";
 import type { SolarPanelsResponse } from "@/lib/hooks/use-energy-data";
 
-type PanelData = SolarPanelsResponse["arrays"][number]["panels"][number];
+type ArrayData = SolarPanelsResponse["arrays"][number];
 
-function SolarPanelIcon({ panel }: { panel: PanelData }) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "optimal": return "text-primary bg-primary/10 border-primary/30";
-      case "good": return "text-warning bg-warning/10 border-warning/30";
-      case "maintenance": return "text-chart-3 bg-chart-3/10 border-chart-3/30";
-      default: return "text-muted-foreground bg-muted/40 border-border";
-    }
-  };
+function statusBadge(status: ArrayData["status"]) {
+  if (status === "optimal")
+    return <Badge className="bg-primary/15 text-primary border-primary/30">Optimal</Badge>;
+  if (status === "good")
+    return <Badge className="bg-warning/15 text-warning border-warning/30">Good</Badge>;
+  return <Badge className="bg-chart-3/15 text-chart-3 border-chart-3/30">Maintenance</Badge>;
+}
+
+function statusBorder(status: ArrayData["status"]): string {
+  if (status === "optimal") return "border-primary/30";
+  if (status === "good") return "border-warning/30";
+  return "border-chart-3/30";
+}
+
+function SolarArrayCard({ array }: { array: ArrayData }) {
   return (
-    <div className={`relative p-3 rounded-lg border-2 transition-all hover:scale-105 cursor-pointer ${getStatusColor(panel.status)}`}>
-      <div className="flex flex-col items-center space-y-1">
-        <Sun className="h-8 w-8" />
-        <div className="text-sm font-bold">{panel.production_kw.toFixed(2)} kW</div>
-        <div className="text-xs opacity-75">{panel.efficiency_pct}%</div>
-        <div className="absolute -top-2 -left-2 bg-card rounded-full px-2 py-1 text-xs font-semibold border shadow-sm">
-          #{panel.panel_id}
+    <Card className={`border-2 ${statusBorder(array.status)}`}>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center justify-between text-base">
+          <div className="flex items-center gap-2">
+            <Sun className="h-5 w-5 text-chart-1" />
+            {array.name}
+          </div>
+          {statusBadge(array.status)}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div>
+          <div className="flex justify-between text-sm">
+            <span>Output</span>
+            <span className="font-semibold">
+              {array.current_kw.toFixed(2)} / {array.rated_kw.toFixed(2)} kW
+            </span>
+          </div>
+          <Progress value={array.efficiency_pct} className="h-2 mt-1" />
         </div>
-      </div>
-    </div>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <div className="text-muted-foreground">Panels</div>
+            <div className="font-semibold">{array.panel_count}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Per-Panel Rating</div>
+            <div className="font-semibold">{array.output_per_panel_kw} kW</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Efficiency</div>
+            <div className="font-semibold">{array.efficiency_pct}%</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Weather Factor</div>
+            <div className="font-semibold">{Math.round(array.weather_factor * 100)}%</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -54,7 +91,7 @@ export default function SolarPage() {
           <CardDescription>
             {error
               ? "Unable to load solar data."
-              : "No solar arrays are configured. Add one in Settings to see live panel performance."}
+              : "No solar arrays are configured. Add one in Settings to see live performance."}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -62,21 +99,31 @@ export default function SolarPage() {
   }
 
   const { arrays, summary } = data;
-  const allPanels = arrays.flatMap((a) => a.panels);
+  const totalPanels = arrays.reduce((s, a) => s + a.panel_count, 0);
   const totalCurrent = arrays.reduce((s, a) => s + a.current_kw, 0);
-  const avgEfficiency = Math.round(
-    allPanels.reduce((s, p) => s + p.efficiency_pct, 0) / Math.max(1, allPanels.length)
-  );
-  const weatherPct = Math.round((arrays[0]?.weather_factor ?? 1) * 100);
+  const totalRated = arrays.reduce((s, a) => s + a.rated_kw, 0);
+  const avgEfficiency =
+    arrays.length > 0
+      ? Math.round(arrays.reduce((s, a) => s + a.efficiency_pct, 0) / arrays.length)
+      : 0;
+  // Average weather factor across arrays — handles N arrays uniformly.
+  const avgWeather =
+    arrays.length > 0
+      ? arrays.reduce((s, a) => s + a.weather_factor, 0) / arrays.length
+      : 1;
+  const weatherPct = Math.round(avgWeather * 100);
+
+  const headerSubtitle =
+    arrays.length === 1
+      ? `Monitor your ${totalPanels}-panel solar array (${totalRated.toFixed(2)} kW rated)`
+      : `Monitor your ${arrays.length} solar arrays (${totalPanels} panels, ${totalRated.toFixed(2)} kW rated)`;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Solar Power System</CardTitle>
-          <CardDescription>
-            Monitor your {allPanels.length}-panel solar array performance and energy generation in real-time
-          </CardDescription>
+          <CardDescription>{headerSubtitle}</CardDescription>
         </CardHeader>
       </Card>
 
@@ -146,37 +193,20 @@ export default function SolarPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sun className="h-5 w-5" />
-            Individual Panel Performance
+            {arrays.length === 1 ? "Array Performance" : "Array Performance"}
           </CardTitle>
-          <CardDescription>
-            Real-time output from each of your {allPanels.length} solar panels
-          </CardDescription>
+          <CardDescription>Real-time output from each of your solar arrays</CardDescription>
           <CardAction>
-            <Badge variant="default" className="bg-primary/15 text-primary border-primary/30">
-              {allPanels.every((p) => p.status !== "maintenance")
-                ? "All Systems Operational"
-                : "Maintenance Recommended"}
+            <Badge variant="outline">
+              {arrays.length} {arrays.length === 1 ? "array" : "arrays"}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {allPanels.map((panel) => (
-              <SolarPanelIcon key={panel.panel_id} panel={panel} />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {arrays.map((a) => (
+              <SolarArrayCard key={a.id} array={a} />
             ))}
-          </div>
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div>
-                <span className="font-semibold">Total Panels:</span> {allPanels.length}
-              </div>
-              <div>
-                <span className="font-semibold">Average Efficiency:</span> {avgEfficiency}%
-              </div>
-              <div>
-                <span className="font-semibold">Combined Output:</span> {totalCurrent.toFixed(2)} kW
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -193,7 +223,7 @@ export default function SolarPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Weather Factor</span>
+                <span className="text-sm">Weather Conditions</span>
                 <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">
                   {weatherPct >= 80 ? "Clear" : weatherPct >= 50 ? "Partly Cloudy" : "Overcast"}
                 </Badge>

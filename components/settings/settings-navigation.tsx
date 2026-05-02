@@ -27,10 +27,6 @@ const settingsSections: SettingsSection[] = [
   },
 
   {
-    id: "notification-settings", 
-    title: "Notification Settings"
-  },
-  {
     id: "account-settings",
     title: "Account Settings",
     subsections: [

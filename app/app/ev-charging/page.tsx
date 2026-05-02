@@ -190,9 +190,6 @@ export default function EVChargingPage() {
               Smart Charging Schedule
             </CardTitle>
             <CardDescription>Optimized charging based on rates and solar</CardDescription>
-            <CardAction>
-              <Button variant="outline" size="sm">Edit Schedule</Button>
-            </CardAction>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

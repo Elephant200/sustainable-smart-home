@@ -34,12 +34,12 @@ export async function GET() {
     ? computeSolarArrayInstant(context.solarConfigs[0], now)
     : undefined;
 
-  // Derive battery health by asking each battery's adapter for its modules.
-  // Module count and per-module health come from the adapter (so a real
-  // provider would return its own values), giving a single source of truth
-  // shared with /api/energy/analytics.
+  // Battery health for alerting: average across batteries that actually
+  // report it. When no provider exposes health we pass `null`, and
+  // deriveAlerts simply skips the health-based alert (vs. defaulting to 100
+  // which would silently suppress the alert under fake data).
   const batteryDevices = context.rawDevices.filter((d) => d.type === 'battery');
-  let batteryHealthPct = 100;
+  let batteryHealthPct: number | null = null;
   if (batteryDevices.length > 0) {
     const statuses = await Promise.all(
       batteryDevices.map((d) =>
@@ -50,19 +50,12 @@ export async function GET() {
         }).getStatus()
       )
     );
-    const allModules = statuses.flatMap((s) => s.batteryModules ?? []);
-    if (allModules.length > 0) {
+    const reported = statuses
+      .map((s) => s.batteryHealthPct)
+      .filter((v): v is number => typeof v === 'number');
+    if (reported.length > 0) {
       batteryHealthPct =
-        allModules.reduce((s, m) => s + m.health_pct, 0) / allModules.length;
-    } else {
-      // Fallback to provider-reported aggregate when modules aren't exposed.
-      const reported = statuses
-        .map((s) => s.batteryHealthPct)
-        .filter((v): v is number => typeof v === 'number');
-      if (reported.length > 0) {
-        batteryHealthPct =
-          reported.reduce((s, v) => s + v, 0) / reported.length;
-      }
+        reported.reduce((s, v) => s + v, 0) / reported.length;
     }
   }
 

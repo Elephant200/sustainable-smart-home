@@ -1,10 +1,10 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Bell, Settings, Clock, Car, Battery, Sun, Zap,
+  Bell, Clock, Car, Battery, Sun, Zap,
   DollarSign, AlertTriangle, CheckCircle, Info, TrendingUp, Shield, Cloud,
 } from "lucide-react";
 import { SkeletonChartCard } from "@/components/ui/skeleton";
@@ -197,9 +197,6 @@ export default function AlertsPage() {
             Recent Notifications
           </CardTitle>
           <CardDescription>Latest system events and alerts</CardDescription>
-          <CardAction>
-            <Button variant="outline" size="sm">Mark All Read</Button>
-          </CardAction>
         </CardHeader>
         <CardContent className="space-y-4">
           {recentNotifications.length === 0 ? (
@@ -219,12 +216,6 @@ export default function AlertsPage() {
             All Notifications
           </CardTitle>
           <CardDescription>Complete notification history</CardDescription>
-          <CardAction>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">Filter</Button>
-              <Button variant="outline" size="sm">Export</Button>
-            </div>
-          </CardAction>
         </CardHeader>
         <CardContent className="space-y-3">
           {notifications.length === 0 ? (
@@ -237,24 +228,6 @@ export default function AlertsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Notification Preferences
-          </CardTitle>
-          <CardDescription>Manage your alert settings and emergency contacts</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-            <div>
-              <p className="text-sm font-medium">Configure Notification Settings</p>
-              <p className="text-xs text-muted-foreground">Customize which alerts you receive and how you&apos;re notified</p>
-            </div>
-            <Button variant="outline" size="sm">Go to Settings</Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

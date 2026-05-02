@@ -43,7 +43,7 @@ export function EVChargingChart() {
       return row
     }) ?? []
 
-  const config: Record<string, { label: string; color: string }> = {}
+  const config: ChartConfig = {}
   vehicleNames.forEach((name, i) => {
     config[name] = {
       label: name,
@@ -66,7 +66,7 @@ export function EVChargingChart() {
       </CardHeader>
       <CardContent>
         <ChartContainer
-          config={config as unknown as ChartConfig}
+          config={config}
           className="aspect-auto h-[300px] w-full"
         >
           <AreaChart data={series}>

@@ -122,7 +122,12 @@ export async function loadUserContext(): Promise<
     }) => ({
       id: r.device_id,
       battery_capacity_kwh: Number(r.battery_capacity_kwh),
-      target_charge: Number(r.target_charge),
+      // The configuration UI captures target charge as a percent (e.g. 80)
+      // and stores it as-is, but the EV physics model treats target_charge
+      // as a 0..1 fraction. Normalize at this boundary so anything > 1 is
+      // treated as a percent. This keeps both legacy rows (fractional) and
+      // new rows (percent) working without a migration.
+      target_charge: normalizeTargetCharge(Number(r.target_charge)),
       departure_time: r.departure_time,
       charger_power_kw: Number(r.charger_power_kw),
     })
@@ -178,6 +183,18 @@ export async function loadUserContext(): Promise<
       hasGrid: deviceList.some((d) => d.type === 'grid'),
     },
   };
+}
+
+/** Coerce a target-charge value into a 0..1 fraction, regardless of whether
+ *  it was stored as a fraction (legacy) or a percent (current UI). Values
+ *  outside [0, 1] (after normalization) are clamped to a sensible default. */
+function normalizeTargetCharge(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0.8;
+  // Treat anything > 1 as a percent (e.g. 80 → 0.8). Anything in (0, 1] is
+  // already a fraction.
+  const fraction = value > 1 ? value / 100 : value;
+  // Clamp to a safe range so a malformed entry can never blow up the model.
+  return Math.min(1, Math.max(0.1, fraction));
 }
 
 export function findDeviceName(

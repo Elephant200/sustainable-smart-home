@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useSolarData } from "@/lib/hooks/use-data-generation"
+import { useSolarHistory } from "@/lib/hooks/use-energy-data"
 
 type SolarGenerationData = {
   timestamp: string
@@ -35,13 +35,14 @@ type SolarGenerationData = {
 const chartConfig = {
   total_generation_kwh: {
     label: "Solar Generation",
-    color: "hsl(var(--chart-1))", // Solar yellow color instead of purple
+    color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
 
 export function SolarGenerationChart() {
   const [timeRange, setTimeRange] = React.useState("24h")
-  const { data: rawData, loading } = useSolarData(timeRange)
+  const { data, loading } = useSolarHistory(timeRange)
+  const rawData = React.useMemo(() => data?.points ?? [], [data])
 
   // Helper function to aggregate data by specified hour intervals (same as carbon intensity chart)
   const aggregateData = React.useCallback((rawData: SolarGenerationData[], intervalHours: number) => {

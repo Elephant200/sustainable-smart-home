@@ -30,10 +30,11 @@ export async function GET() {
     ? computeBatteryStateAt(battery, now, solarConfigs, evConfigs)
     : null;
 
+  let surplusForEv = Math.max(0, solarOutputKw - houseLoadKw);
   const evStates = evConfigs.map((cfg) => {
-    const surplus = Math.max(0, solarOutputKw - houseLoadKw);
     const soc = computeEvSocPercent(cfg, now);
-    const rate = computeEvChargeRateKw(cfg, now, surplus);
+    const rate = computeEvChargeRateKw(cfg, now, surplusForEv);
+    surplusForEv = Math.max(0, surplusForEv - rate);
     return {
       id: cfg.id,
       name: findDeviceName(rawDevices, cfg.id),

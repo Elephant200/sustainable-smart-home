@@ -215,6 +215,16 @@ export interface EvResponse {
   };
 }
 
+export interface SolarHistoryResponse {
+  range: string;
+  points: { timestamp: string; total_generation_kwh: number }[];
+}
+
+export interface HouseHistoryResponse {
+  range: string;
+  points: { timestamp: string; energy_kwh: number }[];
+}
+
 export const useSnapshot = () => useFetch<SnapshotResponse>('/api/energy/snapshot');
 export const useFlows = (range = '24h') =>
   useFetch<FlowsResponse>(`/api/energy/flows?range=${encodeURIComponent(range)}`);
@@ -224,3 +234,11 @@ export const useSolarPanels = () =>
   useFetch<SolarPanelsResponse>('/api/energy/solar/panels');
 export const useBattery = () => useFetch<BatteryResponse>('/api/energy/battery');
 export const useEv = () => useFetch<EvResponse>('/api/energy/ev');
+export const useSolarHistory = (range = '24h') =>
+  useFetch<SolarHistoryResponse>(
+    `/api/energy/solar/history?range=${encodeURIComponent(range)}`
+  );
+export const useHouseHistory = (range = '24h') =>
+  useFetch<HouseHistoryResponse>(
+    `/api/energy/house/history?range=${encodeURIComponent(range)}`
+  );

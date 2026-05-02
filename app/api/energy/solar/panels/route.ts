@@ -72,7 +72,13 @@ export async function GET() {
     battery
   );
   const currentFlow = solveFlows(now, context.solarConfigs, context.evConfigs, battery);
-  const summary = summarizeAnalytics(todayFlows, monthFlows, yearFlows, currentFlow);
+  const summary = summarizeAnalytics(
+    todayFlows,
+    monthFlows,
+    yearFlows,
+    currentFlow,
+    battery?.capacity_kwh ?? 0
+  );
 
   return NextResponse.json({ arrays, summary });
 }

@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useHouseLoadData } from "@/lib/hooks/use-data-generation"
+import { useHouseHistory } from "@/lib/hooks/use-energy-data"
 
 type HouseLoadData = {
   timestamp: string
@@ -41,7 +41,8 @@ const chartConfig = {
 
 export function HouseLoadChart() {
   const [timeRange, setTimeRange] = React.useState("24h")
-  const { data: rawData, loading } = useHouseLoadData(timeRange)
+  const { data, loading } = useHouseHistory(timeRange)
+  const rawData = React.useMemo(() => data?.points ?? [], [data])
 
   // Helper function to aggregate data by specified hour intervals (same as other charts)
   const aggregateData = React.useCallback((rawData: HouseLoadData[], intervalHours: number) => {

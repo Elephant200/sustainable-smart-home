@@ -33,7 +33,13 @@ export async function GET() {
   ];
 
   const currentFlow = solveFlows(now, context.solarConfigs, context.evConfigs, battery);
-  const summary = summarizeAnalytics(todayFlows, monthFlows, yearFlows, currentFlow);
+  const summary = summarizeAnalytics(
+    todayFlows,
+    monthFlows,
+    yearFlows,
+    currentFlow,
+    battery?.capacity_kwh ?? 0
+  );
   const monthly = aggregateMonthly(trendFlows);
   const costSavings = computeCostSavings(monthFlows);
 

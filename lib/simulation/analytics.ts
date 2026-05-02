@@ -134,7 +134,8 @@ export function summarizeAnalytics(
   todayFlows: SolvedFlows[],
   monthFlows: SolvedFlows[],
   yearFlows: SolvedFlows[],
-  currentFlow: SolvedFlows
+  currentFlow: SolvedFlows,
+  batteryCapacityKwh: number = 0
 ): AnalyticsSummary {
   const solarToday = todayFlows.reduce((s, f) => s + f.solar_kw, 0);
   const todayCost = computeCostSavings(todayFlows).reduce(
@@ -196,7 +197,8 @@ export function summarizeAnalytics(
     carbon_reduced_tons_year: Math.round(monthCarbon * 12 * 10) / 10,
     grid_independence_pct: Math.round(independence),
     daily_savings_usd: Math.round(todayCost * 100) / 100,
-    battery_stored_kwh: Math.round(currentFlow.battery_soc_percent * 10) / 10,
+    battery_stored_kwh:
+      Math.round(((currentFlow.battery_soc_percent / 100) * batteryCapacityKwh) * 10) / 10,
     battery_month_mwh: Math.round((monthBatteryCharge / 1000) * 10) / 10,
     ev_month_mwh: Math.round((monthEv / 1000) * 10) / 10,
     house_month_mwh: Math.round((monthHouse / 1000) * 10) / 10,

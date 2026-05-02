@@ -83,6 +83,15 @@ export async function loadUserContext(): Promise<
       : Promise.resolve({ data: [], error: null }),
   ]);
 
+  if (solarRows.error || batteryRows.error || evRows.error) {
+    return {
+      error: {
+        status: 500,
+        body: { error: 'Failed to load device configuration' },
+      },
+    };
+  }
+
   const solarConfigs: SolarArrayConfig[] = (solarRows.data ?? []).map(
     (r: {
       device_id: string;

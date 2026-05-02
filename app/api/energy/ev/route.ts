@@ -48,14 +48,15 @@ export async function GET() {
   const cleanEnergyPct =
     totalEvKwhToday > 0 ? Math.round((cleanEnergyKwh / totalEvKwhToday) * 100) : 0;
 
+  const solarNow = context.solarConfigs.reduce(
+    (s, c) => s + computeSolarArrayInstant(c, now).total_output_kw,
+    0
+  );
+  let vehicleSurplus = Math.max(0, solarNow - computeHouseLoadInstant(now));
   const vehicles = context.evConfigs.map((cfg) => {
-    const solar = context.solarConfigs.reduce(
-      (s, c) => s + computeSolarArrayInstant(c, now).total_output_kw,
-      0
-    );
-    const surplus = Math.max(0, solar - computeHouseLoadInstant(now));
     const soc = computeEvSocPercent(cfg, now);
-    const rate = computeEvChargeRateKw(cfg, now, surplus);
+    const rate = computeEvChargeRateKw(cfg, now, vehicleSurplus);
+    vehicleSurplus = Math.max(0, vehicleSurplus - rate);
     const tt = timeToFull(soc, cfg);
     const status: 'charging' | 'completed' | 'disconnected' =
       rate > 0.1 ? 'charging' : soc >= cfg.target_charge * 100 - 0.5 ? 'completed' : 'disconnected';

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { headers } from "next/headers";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -29,11 +30,13 @@ const fraunces = Fraunces({
   axes: ["opsz", "SOFT"],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${fraunces.variable} font-sans antialiased`}>
@@ -42,6 +45,7 @@ export default function RootLayout({
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
+          nonce={nonce}
         >
           {children}
         </ThemeProvider>

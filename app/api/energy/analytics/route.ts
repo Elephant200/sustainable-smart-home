@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters';
 import {
@@ -12,14 +12,25 @@ import {
   solveFlowsHistoryFromAdapters,
   solveCurrentFlowFromAdapters,
 } from '@/lib/server/adapter-flows';
+import { checkReadRateLimit } from '@/lib/api/rate-limit';
+import { validateQuery } from '@/lib/api/validate';
+import { z } from 'zod';
+
+const NoQuerySchema = z.object({}).strict();
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const result = await loadUserContext();
   if (result.error)
     return NextResponse.json(result.error.body, { status: result.error.status });
+
+  const rateLimitError = checkReadRateLimit(req, result.context.user.id);
+  if (rateLimitError) return rateLimitError;
   const { context } = result;
+
+  const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
+  if (qr.error) return qr.error;
 
   const now = new Date();
   const startToday = new Date(now);

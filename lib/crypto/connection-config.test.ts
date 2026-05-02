@@ -26,6 +26,13 @@ test('round-trips a non-empty credentials object', () => {
   assert.deepEqual(decrypted, plaintext);
 });
 
+test('encrypted payload is prefixed with key version', () => {
+  const encrypted = encryptConnectionConfig({ token: 'x' });
+  assert.ok(encrypted.__encrypted.startsWith('v1:'), 'should start with v1:');
+  const parts = encrypted.__encrypted.split(':');
+  assert.equal(parts.length, 4, 'versioned format should have 4 colon-separated parts');
+});
+
 test('produces a different ciphertext on each encryption (random IV)', () => {
   const plaintext = { token: 'same-value' };
   const a = encryptConnectionConfig(plaintext);
@@ -62,32 +69,31 @@ test('rejects malformed payload (truncated)', () => {
 
 test('rejects malformed payload (tampered ciphertext fails auth tag)', () => {
   const encrypted = encryptConnectionConfig({ token: 'real' });
-  const [iv, tag, ct] = encrypted.__encrypted.split(':');
+  const [ver, iv, tag, ct] = encrypted.__encrypted.split(':');
   const flippedCt = ct.startsWith('0')
     ? '1' + ct.slice(1)
     : '0' + ct.slice(1);
-  const tampered = { __encrypted: [iv, tag, flippedCt].join(':') };
+  const tampered = { __encrypted: [ver, iv, tag, flippedCt].join(':') };
   const result = decryptConnectionConfig(tampered);
   assert.deepEqual(result, {});
 });
 
 test('rejects malformed payload (tampered auth tag)', () => {
   const encrypted = encryptConnectionConfig({ token: 'real' });
-  const [iv, tag, ct] = encrypted.__encrypted.split(':');
+  const [ver, iv, tag, ct] = encrypted.__encrypted.split(':');
   const flippedTag = tag.startsWith('0')
     ? '1' + tag.slice(1)
     : '0' + tag.slice(1);
-  const tampered = { __encrypted: [iv, flippedTag, ct].join(':') };
+  const tampered = { __encrypted: [ver, iv, flippedTag, ct].join(':') };
   const result = decryptConnectionConfig(tampered);
   assert.deepEqual(result, {});
 });
 
-test('rejects payload encrypted with a different key', () => {
+test('rejects payload with unknown key version', () => {
   const encrypted = encryptConnectionConfig({ token: 'real' });
-  const original = process.env.CONNECTION_CONFIG_SECRET;
-  process.env.CONNECTION_CONFIG_SECRET = 'c'.repeat(64);
-  const result = decryptConnectionConfig(encrypted);
-  process.env.CONNECTION_CONFIG_SECRET = original;
+  const [, iv, tag, ct] = encrypted.__encrypted.split(':');
+  const badVersion = { __encrypted: ['v99', iv, tag, ct].join(':') };
+  const result = decryptConnectionConfig(badVersion);
   assert.deepEqual(result, {});
 });
 
@@ -95,4 +101,14 @@ test('treats stored value with no __encrypted field as empty plaintext', () => {
   assert.deepEqual(decryptConnectionConfig({}), {});
   assert.deepEqual(decryptConnectionConfig({ some: 'legacy-field' }), {});
   assert.equal(isConfigured({}), false);
+});
+
+test('decrypts legacy unversioned format (3-part: iv:tag:ciphertext)', () => {
+  const encrypted = encryptConnectionConfig({ legacy: true });
+  const parts = encrypted.__encrypted.split(':');
+  assert.equal(parts.length, 4, 'sanity-check: versioned payload has 4 parts');
+  const [, iv, tag, ct] = parts;
+  const legacyPayload = { __encrypted: [iv, tag, ct].join(':') };
+  const result = decryptConnectionConfig(legacyPayload);
+  assert.deepEqual(result, { legacy: true });
 });

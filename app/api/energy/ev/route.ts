@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext, findDeviceName } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters/factory';
 import { pickGridDevice } from '@/lib/server/system-devices';
@@ -12,6 +12,11 @@ import {
   PRIORITY_MODE_LABEL,
   EV_EFFICIENCY_MI_PER_KWH,
 } from '@/lib/simulation';
+import { checkReadRateLimit } from '@/lib/api/rate-limit';
+import { validateQuery } from '@/lib/api/validate';
+import { z } from 'zod';
+
+const NoQuerySchema = z.object({}).strict();
 
 export const dynamic = 'force-dynamic';
 
@@ -23,11 +28,17 @@ function fmtTime(date: Date): string {
   return `${h}:${String(m).padStart(2, '0')} ${am}`;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const result = await loadUserContext();
   if (result.error)
     return NextResponse.json(result.error.body, { status: result.error.status });
   const { context } = result;
+
+  const rateLimitError = checkReadRateLimit(req, context.user.id);
+  if (rateLimitError) return rateLimitError;
+
+  const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
+  if (qr.error) return qr.error;
 
   const now = new Date();
   const startToday = new Date(now);

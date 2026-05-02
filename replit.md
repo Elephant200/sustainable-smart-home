@@ -63,7 +63,7 @@ Preferred communication style: Simple, everyday language.
 | `power_generation` | Time-series solar/wind generation records |
 | `energy_flows` | Time-series power flow records |
 
-**Credential security**: Device `connection_config` (API keys, tokens for real hardware providers) is encrypted at rest using AES-256-GCM (`lib/crypto/connection-config.ts`). The encryption key is read from `CONNECTION_CONFIG_SECRET` env var (64-char hex / 32 bytes). A dev fallback is used if unset, with a warning.
+**Credential security**: Device `connection_config` (API keys, tokens for real hardware providers) is encrypted at rest using AES-256-GCM (`lib/crypto/connection-config.ts`). The encrypted format includes a key-version prefix (`v1:iv:tag:ciphertext`) enabling future key rotation without breaking existing rows. The encryption key is read from `CONNECTION_CONFIG_SECRET` env var (64-char hex / 32 bytes). The server fails hard at startup if no key is configured outside `NODE_ENV=test`. See `SECURITY.md` for the full threat model, key rotation procedure, and how to run the re-encryption migration (`npm run migrate:reencrypt`).
 
 ### Device Adapter Pattern
 

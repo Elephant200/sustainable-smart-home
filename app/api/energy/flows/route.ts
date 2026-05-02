@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
 import { solveFlowsHistoryFromAdapters } from '@/lib/server/adapter-flows';
+import { checkReadRateLimit } from '@/lib/api/rate-limit';
+import { validateQuery } from '@/lib/api/validate';
+import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
+
+const RangeQuerySchema = z.object({
+  range: z.enum(['24h', '7d', '3m', '1y']).default('24h'),
+}).strict();
 
 function rangeToStartDate(range: string): Date {
   const now = new Date();
@@ -26,8 +33,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result.error.body, { status: result.error.status });
   const { context } = result;
 
-  const range = req.nextUrl.searchParams.get('range') ?? '24h';
-  const startDate = rangeToStartDate(range);
+  const rateLimitError = checkReadRateLimit(req, context.user.id);
+  if (rateLimitError) return rateLimitError;
+
+  const qr = validateQuery(RangeQuerySchema, req.nextUrl.searchParams);
+  if (qr.error) return qr.error;
+  const { range } = qr.data;
+  const startDate = rangeToStartDate(range ?? '24h');
   const endDate = new Date();
 
   // Adapter-driven flow series: live data from configured providers, with

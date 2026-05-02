@@ -1,16 +1,27 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext, findDeviceName } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters/factory';
 import { pickGridDevice, pickHouseDevice } from '@/lib/server/system-devices';
 import { estimateRangeMiles } from '@/lib/simulation';
 import { allocateFlowEdges } from '@/lib/simulation/flows';
+import { checkReadRateLimit } from '@/lib/api/rate-limit';
+import { validateQuery } from '@/lib/api/validate';
+import { z } from 'zod';
+
+const NoQuerySchema = z.object({}).strict();
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const result = await loadUserContext();
   if (result.error) return NextResponse.json(result.error.body, { status: result.error.status });
+
+  const rateLimitError = checkReadRateLimit(req, result.context.user.id);
+  if (rateLimitError) return rateLimitError;
   const { context } = result;
+
+  const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
+  if (qr.error) return qr.error;
   const { rawDevices, solarConfigs, batteryConfigs, evConfigs, user } = context;
 
   const adapterCtx = {

@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { populateUserData, clearUserData } from '@/lib/data-generator/populate-database';
+import { validateQuery } from '@/lib/api/validate';
+import { checkWriteRateLimit } from '@/lib/api/rate-limit';
+import { z } from 'zod';
+
+const PopulateQuerySchema = z.object({
+  action: z.enum(['populate', 'clear', 'count', 'status']).default('status'),
+  force: z.enum(['true', 'false']).optional().transform((v) => v === 'true'),
+}).strict();
 
 export async function GET(request: NextRequest) {
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { success: false, error: 'Not available in production' },
+      { status: 403 }
+    );
+  }
+
   try {
     const supabase = await createClient();
     
-    // Check authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ 
@@ -15,18 +29,21 @@ export async function GET(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action') || 'status';
-    const force = searchParams.get('force') === 'true';
+    const rateLimitError = checkWriteRateLimit(request, user.id);
+    if (rateLimitError) return rateLimitError;
+
+    const qr = validateQuery(PopulateQuerySchema, request.nextUrl.searchParams);
+    if (qr.error) return qr.error;
+
+    const { action, force } = qr.data;
     
     if (action === 'clear') {
       const result = await clearUserData(user.id);
       return NextResponse.json(result);
     } else if (action === 'populate') {
-      const result = await populateUserData(user.id, force);
+      const result = await populateUserData(user.id, force ?? false);
       return NextResponse.json(result);
     } else if (action === 'count') {
-      // Check how much data exists
       const { data: solarCount } = await supabase
         .from('power_generation')
         .select('timestamp', { count: 'exact' })
@@ -37,7 +54,6 @@ export async function GET(request: NextRequest) {
         .select('timestamp', { count: 'exact' })
         .eq('user_id', user.id);
       
-      // Get date range
       const { data: solarRange } = await supabase
         .from('power_generation')
         .select('timestamp')
@@ -64,7 +80,6 @@ export async function GET(request: NextRequest) {
         }
       });
     } else {
-      // Default status endpoint
       return NextResponse.json({
         success: true,
         message: 'Database population API is ready',
@@ -86,4 +101,4 @@ export async function GET(request: NextRequest) {
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-} 
+}

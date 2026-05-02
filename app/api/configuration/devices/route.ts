@@ -1,21 +1,50 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
-import { ProviderType } from "@/lib/adapters/types";
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { ProviderType } from '@/lib/adapters/types';
 import {
   encryptConnectionConfig,
   maskForClient,
-} from "@/lib/crypto/connection-config";
+} from '@/lib/crypto/connection-config';
+import { checkReadRateLimit, checkWriteRateLimit } from '@/lib/api/rate-limit';
+import { validateBody, validateQuery, parseBody, getClientIp } from '@/lib/api/validate';
+import { recordAuditEvent } from '@/lib/audit/log';
+import { z } from 'zod';
 
 const VALID_PROVIDER_TYPES: ProviderType[] = [
   'simulated', 'tesla', 'enphase', 'home_assistant', 'solaredge', 'emporia'
 ];
 
-export async function GET() {
+const VALID_DEVICE_TYPES = ['solar_array', 'battery', 'ev', 'grid', 'house'] as const;
+
+const NoQuerySchema = z.object({}).strict();
+
+const PostDeviceSchema = z.object({
+  name: z.string().min(1).max(100),
+  type: z.enum(VALID_DEVICE_TYPES),
+  provider_type: z.enum(['simulated', 'tesla', 'enphase', 'home_assistant', 'solaredge', 'emporia']).optional(),
+  connection_config: z.record(z.unknown()).optional(),
+  panel_count: z.number().positive().optional(),
+  output_per_panel_kw: z.number().positive().optional(),
+  capacity_kwh: z.number().positive().optional(),
+  max_flow_kw: z.number().positive().optional(),
+  battery_capacity_kwh: z.number().positive().optional(),
+  target_charge: z.number().int().min(1).max(100).optional(),
+  departure_time: z.string().optional(),
+  charger_power_kw: z.number().positive().optional(),
+}).strict();
+
+export async function GET(req: NextRequest) {
   const supabase = await createClient();  
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const rateLimitError = checkReadRateLimit(req, user.id);
+  if (rateLimitError) return rateLimitError;
+
+  const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
+  if (qr.error) return qr.error;
 
   try {
     const { data: devices, error: devicesError } = await supabase
@@ -27,7 +56,7 @@ export async function GET() {
 
     if (devicesError) {
       console.error('Error fetching devices:', devicesError);
-      return NextResponse.json({ error: "Failed to fetch devices" }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 });
     }
 
     const devicesWithConfig = await Promise.all(
@@ -80,27 +109,46 @@ export async function GET() {
 
   } catch (error) {
     console.error('Error fetching devices:', error);
-    return NextResponse.json({ error: "Failed to fetch devices" }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 });
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   const supabase = await createClient();  
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const requestData = await request.json();
-  const { name, type, provider_type, connection_config, ...config } = requestData;
+  const rateLimitError = checkWriteRateLimit(req, user.id);
+  if (rateLimitError) return rateLimitError;
 
-  if (!name || !type) {
-    return NextResponse.json({ error: "Name and type are required" }, { status: 400 });
-  }
+  const bodyResult = await parseBody(req);
+  if (bodyResult.error) return bodyResult.error;
 
-  const validTypes = ['solar_array', 'battery', 'ev', 'grid', 'house'];
-  if (!validTypes.includes(type)) {
-    return NextResponse.json({ error: "Invalid device type" }, { status: 400 });
+  const vr = validateBody(PostDeviceSchema, bodyResult.data);
+  if (vr.error) return vr.error;
+
+  const { name, type, provider_type, connection_config, ...config } = vr.data;
+
+  // Validate all type-specific required fields BEFORE any DB writes so that
+  // invalid requests are rejected with 400 without creating partial records.
+  switch (type) {
+    case 'solar_array':
+      if (!config.panel_count || !config.output_per_panel_kw) {
+        return NextResponse.json({ error: 'Panel count and output per panel are required for solar arrays' }, { status: 400 });
+      }
+      break;
+    case 'battery':
+      if (!config.capacity_kwh || !config.max_flow_kw) {
+        return NextResponse.json({ error: 'Capacity and max flow are required for batteries' }, { status: 400 });
+      }
+      break;
+    case 'ev':
+      if (!config.battery_capacity_kwh || !config.target_charge || !config.departure_time || !config.charger_power_kw) {
+        return NextResponse.json({ error: 'All EV configuration fields are required' }, { status: 400 });
+      }
+      break;
   }
 
   const resolvedProvider: ProviderType =
@@ -113,6 +161,8 @@ export async function POST(request: Request) {
       ? connection_config
       : {}
   );
+
+  const actorIp = getClientIp(req);
 
   try {
     const { data: device, error: deviceError } = await supabase
@@ -130,16 +180,13 @@ export async function POST(request: Request) {
 
     if (deviceError) {
       console.error('Error inserting device:', deviceError);
-      return NextResponse.json({ error: "Failed to create device" }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create device' }, { status: 500 });
     }
 
     let configError = null;
 
     switch (type) {
       case 'solar_array': {
-        if (!config.panel_count || !config.output_per_panel_kw) {
-          return NextResponse.json({ error: "Panel count and output per panel are required for solar arrays" }, { status: 400 });
-        }
         const { error: solarError } = await supabase
           .from('solar_config')
           .insert({
@@ -151,9 +198,6 @@ export async function POST(request: Request) {
         break;
       }
       case 'battery': {
-        if (!config.capacity_kwh || !config.max_flow_kw) {
-          return NextResponse.json({ error: "Capacity and max flow are required for batteries" }, { status: 400 });
-        }
         const { error: batteryError } = await supabase
           .from('battery_config')
           .insert({
@@ -169,7 +213,7 @@ export async function POST(request: Request) {
             device_id: device.id,
             timestamp: new Date(Math.floor(Date.now() / (1000 * 60 * 60)) * (1000 * 60 * 60)),
             soc_percent: 50,
-            soc_kwh: config.capacity_kwh * 0.5,
+            soc_kwh: config.capacity_kwh! * 0.5,
           });
         if (stateError) {
           console.error('Error inserting battery state:', stateError);
@@ -178,9 +222,6 @@ export async function POST(request: Request) {
         break;
       }
       case 'ev': {
-        if (!config.battery_capacity_kwh || !config.target_charge || !config.departure_time || !config.charger_power_kw) {
-          return NextResponse.json({ error: "All EV configuration fields are required" }, { status: 400 });
-        }
         const { error: evError } = await supabase
           .from('ev_config')
           .insert({
@@ -215,11 +256,32 @@ export async function POST(request: Request) {
     if (configError) {
       console.error('Error inserting device config:', configError);
       await supabase.from('devices').delete().eq('id', device.id);
-      return NextResponse.json({ error: "Failed to create device configuration" }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create device configuration' }, { status: 500 });
     }
 
+    const hasCredentials = typeof connection_config === 'object' &&
+      connection_config !== null &&
+      Object.keys(connection_config).length > 0;
+
+    await Promise.all([
+      recordAuditEvent({
+        userId: user.id,
+        action: 'device.create',
+        deviceId: device.id,
+        actorIp,
+        metadata: { name, type, provider_type: resolvedProvider },
+      }),
+      hasCredentials && recordAuditEvent({
+        userId: user.id,
+        action: 'credential.write',
+        deviceId: device.id,
+        actorIp,
+        metadata: { provider_type: resolvedProvider },
+      }),
+    ]);
+
     return NextResponse.json({ 
-      message: "Device created successfully",
+      message: 'Device created successfully',
       device: {
         id: device.id,
         name: device.name,
@@ -231,6 +293,6 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Error creating device:', error);
-    return NextResponse.json({ error: "Failed to create device" }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create device' }, { status: 500 });
   }
 }

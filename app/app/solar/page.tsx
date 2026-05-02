@@ -1,36 +1,17 @@
+"use client";
+
 import { Suspense } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sun, TrendingUp, CloudSun, Battery, Zap, Leaf, DollarSign } from "lucide-react";
-import type { Metadata } from "next";
 import { SolarGenerationChart } from "@/components/visualizations/solar-generation-chart";
 import { SkeletonChartCard } from "@/components/ui/skeleton";
+import { useSolarPanels } from "@/lib/hooks/use-energy-data";
+import type { SolarPanelsResponse } from "@/lib/hooks/use-energy-data";
 
-export const metadata: Metadata = {
-  title: "Solar Power",
-};
+type PanelData = SolarPanelsResponse["arrays"][number]["panels"][number];
 
-// Fake data for individual solar panels
-const solarPanels = [
-  { id: 1, production: 0.42, efficiency: 98, status: "optimal" },
-  { id: 2, production: 0.41, efficiency: 96, status: "optimal" },
-  { id: 3, production: 0.38, efficiency: 89, status: "good" },
-  { id: 4, production: 0.43, efficiency: 99, status: "optimal" },
-  { id: 5, production: 0.40, efficiency: 94, status: "optimal" },
-  { id: 6, production: 0.39, efficiency: 92, status: "good" },
-  { id: 7, production: 0.42, efficiency: 97, status: "optimal" },
-  { id: 8, production: 0.37, efficiency: 87, status: "maintenance" },
-  { id: 9, production: 0.41, efficiency: 95, status: "optimal" },
-  { id: 10, production: 0.40, efficiency: 93, status: "optimal" },
-  { id: 11, production: 0.39, efficiency: 91, status: "good" },
-  { id: 12, production: 0.42, efficiency: 98, status: "optimal" },
-];
-
-// Fake statistics
-const totalProduction = solarPanels.reduce((sum, panel) => sum + panel.production, 0);
-const avgEfficiency = Math.round(solarPanels.reduce((sum, panel) => sum + panel.efficiency, 0) / solarPanels.length);
-
-function SolarPanelIcon({ panel }: { panel: typeof solarPanels[0] }) {
+function SolarPanelIcon({ panel }: { panel: PanelData }) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "optimal": return "text-primary bg-primary/10 border-primary/30";
@@ -39,15 +20,14 @@ function SolarPanelIcon({ panel }: { panel: typeof solarPanels[0] }) {
       default: return "text-muted-foreground bg-muted/40 border-border";
     }
   };
-
   return (
     <div className={`relative p-3 rounded-lg border-2 transition-all hover:scale-105 cursor-pointer ${getStatusColor(panel.status)}`}>
       <div className="flex flex-col items-center space-y-1">
         <Sun className="h-8 w-8" />
-        <div className="text-sm font-bold">{panel.production} kW</div>
-        <div className="text-xs opacity-75">{panel.efficiency}%</div>
+        <div className="text-sm font-bold">{panel.production_kw.toFixed(2)} kW</div>
+        <div className="text-xs opacity-75">{panel.efficiency_pct}%</div>
         <div className="absolute -top-2 -left-2 bg-card rounded-full px-2 py-1 text-xs font-semibold border shadow-sm">
-          #{panel.id}
+          #{panel.panel_id}
         </div>
       </div>
     </div>
@@ -55,18 +35,51 @@ function SolarPanelIcon({ panel }: { panel: typeof solarPanels[0] }) {
 }
 
 export default function SolarPage() {
+  const { data, loading, error } = useSolarPanels();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonChartCard height={120} />
+        <SkeletonChartCard height={300} />
+      </div>
+    );
+  }
+
+  if (error || !data || data.arrays.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Solar Power System</CardTitle>
+          <CardDescription>
+            {error
+              ? "Unable to load solar data."
+              : "No solar arrays are configured. Add one in Settings to see live panel performance."}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const { arrays, summary } = data;
+  const allPanels = arrays.flatMap((a) => a.panels);
+  const totalCurrent = arrays.reduce((s, a) => s + a.current_kw, 0);
+  const avgEfficiency = Math.round(
+    allPanels.reduce((s, p) => s + p.efficiency_pct, 0) / Math.max(1, allPanels.length)
+  );
+  const weatherPct = Math.round((arrays[0]?.weather_factor ?? 1) * 100);
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Solar Power System</CardTitle>
           <CardDescription>
-            Monitor your 12-panel solar array performance and energy generation in real-time
+            Monitor your {allPanels.length}-panel solar array performance and energy generation in real-time
           </CardDescription>
         </CardHeader>
       </Card>
 
-      {/* Key Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -76,11 +89,11 @@ export default function SolarPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-1">{totalProduction.toFixed(1)} kW</div>
+            <div className="text-3xl font-bold text-chart-1">{totalCurrent.toFixed(2)} kW</div>
             <div className="text-sm text-muted-foreground">Real-time generation</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -89,11 +102,13 @@ export default function SolarPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">28.75 kWh</div>
-            <div className="text-sm text-primary">+12% vs yesterday</div>
+            <div className="text-3xl font-bold text-primary">
+              {summary.solar_today_kwh.toFixed(1)} kWh
+            </div>
+            <div className="text-sm text-primary">{summary.solar_month_mwh} MWh this month</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -102,31 +117,31 @@ export default function SolarPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-2">$43.12</div>
+            <div className="text-3xl font-bold text-chart-2">${summary.daily_savings_usd.toFixed(2)}</div>
             <div className="text-sm text-muted-foreground">Energy cost avoided</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Leaf className="h-5 w-5 text-primary" />
-              CO2 Avoided
+              CO₂ Reduced
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">142 lbs</div>
-            <div className="text-sm text-muted-foreground">Carbon footprint reduced</div>
+            <div className="text-3xl font-bold text-primary">
+              {summary.carbon_reduced_tons_month} tons
+            </div>
+            <div className="text-sm text-muted-foreground">This month</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Solar Generation Chart */}
       <Suspense fallback={<SkeletonChartCard height={300} />}>
         <SolarGenerationChart />
       </Suspense>
 
-      {/* Individual Solar Panels */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -134,36 +149,38 @@ export default function SolarPage() {
             Individual Panel Performance
           </CardTitle>
           <CardDescription>
-            Real-time output from each of your 12 solar panels
+            Real-time output from each of your {allPanels.length} solar panels
           </CardDescription>
           <CardAction>
             <Badge variant="default" className="bg-primary/15 text-primary border-primary/30">
-              All Systems Operational
+              {allPanels.every((p) => p.status !== "maintenance")
+                ? "All Systems Operational"
+                : "Maintenance Recommended"}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {solarPanels.map((panel) => (
-              <SolarPanelIcon key={panel.id} panel={panel} />
+            {allPanels.map((panel) => (
+              <SolarPanelIcon key={panel.panel_id} panel={panel} />
             ))}
           </div>
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="font-semibold">Total Panels:</span> 12
+                <span className="font-semibold">Total Panels:</span> {allPanels.length}
               </div>
               <div>
                 <span className="font-semibold">Average Efficiency:</span> {avgEfficiency}%
               </div>
               <div>
-                <span className="font-semibold">Combined Output:</span> {totalProduction.toFixed(1)} kW
+                <span className="font-semibold">Combined Output:</span> {totalCurrent.toFixed(2)} kW
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -176,25 +193,27 @@ export default function SolarPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Sky Condition</span>
-                <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">Partly Cloudy</Badge>
+                <span className="text-sm">Weather Factor</span>
+                <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">
+                  {weatherPct >= 80 ? "Clear" : weatherPct >= 50 ? "Partly Cloudy" : "Overcast"}
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Temperature</span>
-                <span className="font-semibold">78°F (Optimal)</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">UV Index</span>
-                <span className="font-semibold">7 (High)</span>
+                <span className="text-sm">Solar Conditions</span>
+                <span className="font-semibold">{weatherPct}%</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Generation Efficiency</span>
-                <span className="font-semibold text-primary">94%</span>
+                <span className="font-semibold text-primary">{avgEfficiency}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Active Output</span>
+                <span className="font-semibold text-chart-1">{totalCurrent.toFixed(2)} kW</span>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -206,53 +225,52 @@ export default function SolarPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Battery Level</span>
-                <span className="font-semibold">87%</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Charging Rate</span>
-                <span className="font-semibold text-primary">+2.5 kW</span>
+                <span className="text-sm">Battery Stored</span>
+                <span className="font-semibold">{summary.battery_stored_kwh.toFixed(1)}%</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Storage Efficiency</span>
                 <span className="font-semibold">96%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Estimated Full</span>
-                <span className="font-semibold">2.3 hours</span>
+                <span className="text-sm">Grid Independence</span>
+                <span className="font-semibold">{summary.grid_independence_pct}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Monthly Savings</span>
+                <span className="font-semibold text-primary">${summary.monthly_savings_usd.toLocaleString()}</span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
-      
-      {/* Monthly Summary */}
+
       <Card>
         <CardHeader>
           <CardTitle>Monthly Summary</CardTitle>
-          <CardDescription>July 2025 performance overview</CardDescription>
+          <CardDescription>Current month performance overview</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-chart-1">840 kWh</div>
+              <div className="text-3xl font-bold text-chart-1">{summary.solar_month_mwh} MWh</div>
               <div className="text-sm text-muted-foreground">Total Generated</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">$1,260</div>
+              <div className="text-3xl font-bold text-primary">${summary.monthly_savings_usd.toLocaleString()}</div>
               <div className="text-sm text-muted-foreground">Money Saved</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-chart-2">98%</div>
+              <div className="text-3xl font-bold text-chart-2">{summary.uptime_pct}%</div>
               <div className="text-sm text-muted-foreground">System Uptime</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">4.2 tons</div>
-              <div className="text-sm text-muted-foreground">CO2 Avoided</div>
+              <div className="text-3xl font-bold text-primary">{summary.carbon_reduced_tons_month} tons</div>
+              <div className="text-sm text-muted-foreground">CO₂ Avoided</div>
             </div>
           </div>
         </CardContent>
       </Card>
     </div>
   );
-} 
+}

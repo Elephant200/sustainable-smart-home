@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -6,44 +8,34 @@ import { DollarSign, Leaf, BarChart3, Zap, Sun, Battery, Car, Target, Award } fr
 import { EnergyFlowChart } from "@/components/visualizations/energy-flow-chart-lazy";
 import { MonthlyTrendsChart } from "@/components/visualizations/monthly-trends-chart-lazy";
 import { CostSavingsChart } from "@/components/visualizations/cost-savings-chart-lazy";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Analytics",
-};
-
-// Calculated statistics consistent with other pages
-const systemStats = {
-  // Solar stats (consistent with solar page)
-  solarCurrent: 4.86, // kW
-  solarDaily: 287.5, // kWh
-  solarMonthly: 10.4, // MWh (July 2025)
-  
-  // Battery stats (consistent with battery page)
-  batteryCharge: 87, // %
-  batteryStored: 47.1, // kWh
-  batteryCapacity: 54, // kWh
-  batteryMonthly: 6.8, // MWh
-  
-  // EV stats (consistent with EV page)
-  evCurrent: 7.2, // kW
-  evDaily: 156.3, // kWh
-  evMonthly: 4.2, // MWh
-  
-  // House consumption
-  houseDaily: 68.2, // kWh (estimated from energy balance)
-  houseMonthly: 2.1, // MWh
-  
-  // Financial
-  totalMonthlySavings: 3216, // $ (sum of all categories)
-  dailySavings: 66.57, // $ (solar $43.12 + EV $23.45)
-  
-  // Environmental
-  carbonReduced: 5.7, // tons/month
-  gridIndependence: 73, // %
-};
+import { SkeletonChartCard } from "@/components/ui/skeleton";
+import { useAnalytics, useSnapshot } from "@/lib/hooks/use-energy-data";
 
 export default function AnalyticsPage() {
+  const { data: analytics, loading: aLoading } = useAnalytics();
+  const { data: snap, loading: sLoading } = useSnapshot();
+
+  if (aLoading || sLoading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonChartCard height={120} />
+        <SkeletonChartCard height={400} />
+      </div>
+    );
+  }
+  if (!analytics) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Analytics & Performance Insights</CardTitle>
+          <CardDescription>Unable to load analytics data.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const s = analytics.summary;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -55,7 +47,6 @@ export default function AnalyticsPage() {
         </CardHeader>
       </Card>
 
-      {/* Key Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -65,14 +56,19 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-1">{systemStats.solarCurrent.toFixed(1)} kW</div>
+            <div className="text-3xl font-bold text-chart-1">{s.solar_current_kw.toFixed(2)} kW</div>
             <div className="text-sm text-muted-foreground">Current solar generation</div>
             <div className="mt-2 text-sm">
-              <span className="text-chart-2 font-semibold">+{systemStats.batteryStored} kWh</span> stored
+              <span className="text-chart-2 font-semibold">
+                {snap?.devices.battery
+                  ? `${snap.devices.battery.soc_kwh.toFixed(1)} kWh`
+                  : "—"}
+              </span>{" "}
+              stored
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -81,14 +77,14 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">${systemStats.totalMonthlySavings.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-primary">${s.monthly_savings_usd.toLocaleString()}</div>
             <div className="text-sm text-primary">+18% vs last month</div>
             <div className="mt-2 text-sm text-muted-foreground">
-              ${(systemStats.totalMonthlySavings * 12).toLocaleString()} annual
+              ${s.annual_savings_usd.toLocaleString()} annual
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -97,14 +93,14 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">{systemStats.carbonReduced} tons</div>
+            <div className="text-3xl font-bold text-primary">{s.carbon_reduced_tons_month} tons</div>
             <div className="text-sm text-muted-foreground">CO₂ reduced this month</div>
             <div className="mt-2 text-sm text-primary">
-              {(systemStats.carbonReduced * 12).toFixed(1)} tons/year
+              {s.carbon_reduced_tons_year} tons/year
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -113,23 +109,20 @@ export default function AnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-5">{systemStats.gridIndependence}%</div>
+            <div className="text-3xl font-bold text-chart-5">{s.grid_independence_pct}%</div>
             <div className="text-sm text-muted-foreground">Energy self-sufficiency</div>
-            <Progress value={systemStats.gridIndependence} className="mt-2" />
+            <Progress value={s.grid_independence_pct} className="mt-2" />
           </CardContent>
         </Card>
       </div>
 
-      {/* Energy Flow Chart (lazy-loaded; skeleton handled by dynamic loader) */}
       <EnergyFlowChart />
 
-      {/* Charts Row (lazy-loaded; skeletons handled by dynamic loaders) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <MonthlyTrendsChart />
         <CostSavingsChart />
       </div>
 
-      {/* System Performance Breakdown */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
@@ -142,23 +135,23 @@ export default function AnalyticsPage() {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm">Generation</span>
-              <span className="font-semibold">{systemStats.solarMonthly} MWh</span>
+              <span className="font-semibold">{s.solar_month_mwh} MWh</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm">Efficiency</span>
-              <span className="font-semibold">94%</span>
+              <span className="text-sm">Today</span>
+              <span className="font-semibold">{s.solar_today_kwh} kWh</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm">Peak Output</span>
-              <span className="font-semibold">4.9 kW</span>
+              <span className="text-sm">Current Output</span>
+              <span className="font-semibold">{s.solar_current_kw.toFixed(2)} kW</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Uptime</span>
-              <Badge variant="default" className="bg-primary/15 text-primary">99.2%</Badge>
+              <Badge variant="default" className="bg-primary/15 text-primary">{s.uptime_pct}%</Badge>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -169,16 +162,20 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-sm">Energy Stored</span>
-              <span className="font-semibold">{systemStats.batteryMonthly} MWh</span>
+              <span className="text-sm">Energy Cycled (mo)</span>
+              <span className="font-semibold">{s.battery_month_mwh} MWh</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Round-trip Efficiency</span>
               <span className="font-semibold">96.2%</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm">Cycles Completed</span>
-              <span className="font-semibold">127</span>
+              <span className="text-sm">Current SOC</span>
+              <span className="font-semibold">
+                {snap?.devices.battery
+                  ? `${Math.round(snap.devices.battery.soc_percent)}%`
+                  : "—"}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Health Score</span>
@@ -186,7 +183,7 @@ export default function AnalyticsPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -197,16 +194,16 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-sm">Energy Used</span>
-              <span className="font-semibold">{systemStats.evMonthly} MWh</span>
+              <span className="text-sm">Energy Used (mo)</span>
+              <span className="font-semibold">{s.ev_month_mwh} MWh</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm">Solar Powered</span>
-              <span className="font-semibold">68%</span>
+              <span className="text-sm">Vehicles</span>
+              <span className="font-semibold">{snap?.counts.ev ?? 0}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm">Cost Savings</span>
-              <span className="font-semibold">$287</span>
+              <span className="text-sm">House Load (mo)</span>
+              <span className="font-semibold">{s.house_month_mwh} MWh</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Smart Charging</span>
@@ -216,7 +213,6 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Efficiency & Optimization */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -232,35 +228,28 @@ export default function AnalyticsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Energy Utilization</span>
-                <span className="font-semibold">92%</span>
+                <span>Grid Independence</span>
+                <span className="font-semibold">{s.grid_independence_pct}%</span>
               </div>
-              <Progress value={92} className="h-2" />
+              <Progress value={s.grid_independence_pct} className="h-2" />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Load Balancing</span>
-                <span className="font-semibold">88%</span>
+                <span>System Uptime</span>
+                <span className="font-semibold">{s.uptime_pct}%</span>
               </div>
-              <Progress value={88} className="h-2" />
+              <Progress value={s.uptime_pct} className="h-2" />
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Peak Shaving</span>
-                <span className="font-semibold">96%</span>
+                <span>Battery Health</span>
+                <span className="font-semibold">98%</span>
               </div>
-              <Progress value={96} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Overall Score</span>
-                <span className="font-semibold">94%</span>
-              </div>
-              <Progress value={94} className="h-2" />
+              <Progress value={98} className="h-2" />
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -272,28 +261,40 @@ export default function AnalyticsPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                <div className={`w-2 h-2 rounded-full ${s.grid_independence_pct >= 70 ? "bg-primary" : "bg-warning"}`} />
                 <span className="text-sm">70% Grid Independence</span>
               </div>
-              <Badge variant="default" className="bg-primary/15 text-primary">Achieved</Badge>
+              <Badge
+                variant={s.grid_independence_pct >= 70 ? "default" : "outline"}
+                className={s.grid_independence_pct >= 70 ? "bg-primary/15 text-primary" : ""}
+              >
+                {s.grid_independence_pct >= 70 ? "Achieved" : "In Progress"}
+              </Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-primary rounded-full"></div>
-                <span className="text-sm">5 tons CO₂ Reduced</span>
+                <div className={`w-2 h-2 rounded-full ${s.carbon_reduced_tons_year >= 5 ? "bg-primary" : "bg-warning"}`} />
+                <span className="text-sm">5 tons CO₂ / year</span>
               </div>
-              <Badge variant="default" className="bg-primary/15 text-primary">Achieved</Badge>
+              <Badge
+                variant={s.carbon_reduced_tons_year >= 5 ? "default" : "outline"}
+                className={s.carbon_reduced_tons_year >= 5 ? "bg-primary/15 text-primary" : ""}
+              >
+                {s.carbon_reduced_tons_year >= 5 ? "Achieved" : "In Progress"}
+              </Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-warning rounded-full"></div>
-                <span className="text-sm">$40K Annual Savings</span>
+                <div className="w-2 h-2 bg-warning rounded-full" />
+                <span className="text-sm">${s.annual_savings_usd >= 40000 ? "40K+" : "40K"} Annual Savings</span>
               </div>
-              <Badge variant="outline">In Progress</Badge>
+              <Badge variant={s.annual_savings_usd >= 40000 ? "default" : "outline"}>
+                {s.annual_savings_usd >= 40000 ? "Achieved" : "In Progress"}
+              </Badge>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-muted-foreground/40 rounded-full"></div>
+                <div className="w-2 h-2 bg-muted-foreground/40 rounded-full" />
                 <span className="text-sm">80% Grid Independence</span>
               </div>
               <Badge variant="outline">Upcoming</Badge>
@@ -302,28 +303,29 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      {/* Annual Summary */}
       <Card>
         <CardHeader>
-          <CardTitle>2025 Annual Summary</CardTitle>
-          <CardDescription>Year-to-date performance through July 2025</CardDescription>
+          <CardTitle>{new Date().getFullYear()} Annual Summary</CardTitle>
+          <CardDescription>
+            Year-to-date performance through {new Date().toLocaleString("en-US", { month: "long" })}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <div className="text-center">
-              <div className="text-3xl font-bold text-chart-1">57.4 MWh</div>
+              <div className="text-3xl font-bold text-chart-1">{s.ytd_solar_mwh} MWh</div>
               <div className="text-sm text-muted-foreground">Solar Generated</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">$21,512</div>
+              <div className="text-3xl font-bold text-primary">${s.ytd_savings_usd.toLocaleString()}</div>
               <div className="text-sm text-muted-foreground">Total Savings</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">31.7 tons</div>
+              <div className="text-3xl font-bold text-primary">{s.ytd_carbon_tons} tons</div>
               <div className="text-sm text-muted-foreground">Carbon Avoided</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-chart-2">98.4%</div>
+              <div className="text-3xl font-bold text-chart-2">{s.uptime_pct}%</div>
               <div className="text-sm text-muted-foreground">System Uptime</div>
             </div>
           </div>
@@ -331,4 +333,4 @@ export default function AnalyticsPage() {
       </Card>
     </div>
   );
-} 
+}

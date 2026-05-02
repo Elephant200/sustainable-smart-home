@@ -17,48 +17,40 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { SkeletonChartCard } from "@/components/ui/skeleton"
+import { useEv } from "@/lib/hooks/use-energy-data"
 
-// Chart configuration
-const chartConfig = {
-  teslaModel3: {
-    label: "Tesla Model 3",
-    color: "hsl(var(--chart-2))", // Blue
-  },
-  bmwI4: {
-    label: "BMW i4", 
-    color: "hsl(var(--chart-4))", // Green
-  },
-} satisfies ChartConfig
-
-// Overnight charging data (last 24 hours)
-const overnightChargingData = [
-  { time: "6:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "18:00" },
-  { time: "7:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "19:00" },
-  { time: "8:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "20:00" },
-  { time: "9:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "21:00" },
-  { time: "10:00 PM", teslaModel3: 11.5, bmwI4: 0, totalPower: 11.5, hour: "22:00" },
-  { time: "11:00 PM", teslaModel3: 11.5, bmwI4: 7.2, totalPower: 18.7, hour: "23:00" },
-  { time: "12:00 AM", teslaModel3: 11.5, bmwI4: 7.2, totalPower: 18.7, hour: "00:00" },
-  { time: "1:00 AM", teslaModel3: 11.5, bmwI4: 7.2, totalPower: 18.7, hour: "01:00" },
-  { time: "2:00 AM", teslaModel3: 11.5, bmwI4: 7.2, totalPower: 18.7, hour: "02:00" },
-  { time: "3:00 AM", teslaModel3: 11.5, bmwI4: 7.2, totalPower: 18.7, hour: "03:00" },
-  { time: "4:00 AM", teslaModel3: 8.2, bmwI4: 7.2, totalPower: 15.4, hour: "04:00" },
-  { time: "5:00 AM", teslaModel3: 4.1, bmwI4: 7.2, totalPower: 11.3, hour: "05:00" },
-  { time: "6:00 AM", teslaModel3: 0, bmwI4: 7.2, totalPower: 7.2, hour: "06:00" },
-  { time: "7:00 AM", teslaModel3: 0, bmwI4: 7.2, totalPower: 7.2, hour: "07:00" },
-  { time: "8:00 AM", teslaModel3: 0, bmwI4: 7.2, totalPower: 7.2, hour: "08:00" },
-  { time: "9:00 AM", teslaModel3: 0, bmwI4: 7.2, totalPower: 7.2, hour: "09:00" },
-  { time: "10:00 AM", teslaModel3: 0, bmwI4: 7.2, totalPower: 7.2, hour: "10:00" },
-  { time: "11:00 AM", teslaModel3: 0, bmwI4: 7.2, totalPower: 7.2, hour: "11:00" },
-  { time: "12:00 PM", teslaModel3: 0, bmwI4: 7.2, totalPower: 7.2, hour: "12:00" },
-  { time: "1:00 PM", teslaModel3: 0, bmwI4: 3.6, totalPower: 3.6, hour: "13:00" },
-  { time: "2:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "14:00" },
-  { time: "3:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "15:00" },
-  { time: "4:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "16:00" },
-  { time: "5:00 PM", teslaModel3: 0, bmwI4: 0, totalPower: 0, hour: "17:00" },
-];
+const PALETTE = [
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-3))",
+]
 
 export function EVChargingChart() {
+  const { data, loading, error } = useEv()
+
+  if (loading) return <SkeletonChartCard height={300} />
+
+  const vehicleNames = data?.vehicles.map((v) => v.name) ?? []
+  const series =
+    data?.history.map((p) => {
+      const row: Record<string, string | number> = { time: p.time }
+      for (const name of vehicleNames) {
+        row[name] = p.per_vehicle[name] ?? 0
+      }
+      return row
+    }) ?? []
+
+  const config: Record<string, { label: string; color: string }> = {}
+  vehicleNames.forEach((name, i) => {
+    config[name] = {
+      label: name,
+      color: PALETTE[i % PALETTE.length],
+    }
+  })
+
   return (
     <Card>
       <CardHeader>
@@ -67,54 +59,41 @@ export function EVChargingChart() {
           24-Hour Charging Activity
         </CardTitle>
         <CardDescription>
-          Power consumption showing overnight smart charging schedule
+          {error
+            ? "Unable to load charging data."
+            : "Power consumption showing overnight smart charging schedule"}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer
-          config={chartConfig}
+          config={config as unknown as ChartConfig}
           className="aspect-auto h-[300px] w-full"
         >
-          <AreaChart data={overnightChargingData}>
+          <AreaChart data={series}>
             <defs>
-              <linearGradient id="fillTesla" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-teslaModel3)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-teslaModel3)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
-              <linearGradient id="fillBMW" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--color-bmwI4)"
-                  stopOpacity={0.8}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--color-bmwI4)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
+              {vehicleNames.map((name, i) => (
+                <linearGradient
+                  key={name}
+                  id={`fillEv-${i}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop offset="5%" stopColor={PALETTE[i % PALETTE.length]} stopOpacity={0.8} />
+                  <stop offset="95%" stopColor={PALETTE[i % PALETTE.length]} stopOpacity={0.1} />
+                </linearGradient>
+              ))}
             </defs>
             <CartesianGrid vertical={false} />
-            <XAxis 
-              dataKey="hour" 
+            <XAxis
+              dataKey="time"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={32}
-              tickFormatter={(value) => {
-                const hour = parseInt(value.split(':')[0]);
-                return hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
-              }}
             />
-            <YAxis 
+            <YAxis
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -124,37 +103,25 @@ export function EVChargingChart() {
               cursor={false}
               content={
                 <ChartTooltipContent
-                  labelFormatter={(value) => {
-                    const hour = parseInt(value.split(':')[0]);
-                    return hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`;
-                  }}
-                  formatter={(value, name) => [
-                    `${value} kW`,
-                    chartConfig[name as keyof typeof chartConfig]?.label || name
-                  ]}
+                  formatter={(value, name) => [`${value} kW`, name]}
                   indicator="dot"
                 />
               }
             />
-            <Area
-              dataKey="teslaModel3"
-              type="natural"
-              fill="url(#fillTesla)"
-              stroke="var(--color-teslaModel3)"
-              strokeWidth={2}
-              stackId="1"
-            />
-            <Area
-              dataKey="bmwI4"
-              type="natural"
-              fill="url(#fillBMW)"
-              stroke="var(--color-bmwI4)"
-              strokeWidth={2}
-              stackId="1"
-            />
+            {vehicleNames.map((name, i) => (
+              <Area
+                key={name}
+                dataKey={name}
+                type="natural"
+                fill={`url(#fillEv-${i})`}
+                stroke={PALETTE[i % PALETTE.length]}
+                strokeWidth={2}
+                stackId="1"
+              />
+            ))}
           </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>
   )
-} 
+}

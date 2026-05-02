@@ -1,54 +1,39 @@
+"use client";
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Battery, Zap, Settings, Heart, TrendingUp, Clock, Shield, Thermometer, ArrowUp, ArrowDown } from "lucide-react";
-import type { Metadata } from "next";
+import { SkeletonChartCard } from "@/components/ui/skeleton";
+import { useBattery } from "@/lib/hooks/use-energy-data";
+import type { BatteryResponse } from "@/lib/hooks/use-energy-data";
 
-export const metadata: Metadata = {
-  title: "Battery Storage",
-};
+type ModuleData = BatteryResponse["modules"][number];
 
-// Fake data for individual battery modules (consistent with solar output)
-const batteryModules = [
-  { id: 1, charge: 87, capacity: 13.5, health: 98, temperature: 72, status: "charging", power: 0.6 },
-  { id: 2, charge: 89, capacity: 13.5, health: 96, temperature: 74, status: "charging", power: 0.8 },
-  { id: 3, charge: 85, capacity: 13.5, health: 99, temperature: 71, status: "charging", power: 0.2 },
-  { id: 4, charge: 88, capacity: 13.5, health: 97, temperature: 73, status: "charging", power: 0.9 },
-];
-
-// Calculate totals consistent with solar page
-const totalCapacity = batteryModules.reduce((sum, module) => sum + module.capacity, 0); // 54 kWh
-const avgCharge = Math.round(batteryModules.reduce((sum, module) => sum + module.charge, 0) / batteryModules.length);
-const totalStoredEnergy = batteryModules.reduce((sum, module) => sum + (module.capacity * module.charge / 100), 0);
-const totalChargingPower = batteryModules.reduce((sum, module) => sum + module.power, 0);
-const avgHealth = Math.round(batteryModules.reduce((sum, module) => sum + module.health, 0) / batteryModules.length);
-
-function BatteryModuleIcon({ module }: { module: typeof batteryModules[0] }) {
+function BatteryModuleIcon({ module }: { module: ModuleData }) {
   const getChargeColor = (charge: number) => {
     if (charge >= 80) return "text-primary bg-primary/10 border-primary/30";
     if (charge >= 60) return "text-chart-2 bg-chart-2/10 border-chart-2/30";
     if (charge >= 40) return "text-warning bg-warning/10 border-warning/30";
     return "text-chart-3 bg-chart-3/10 border-chart-3/30";
   };
-
   const getStatusIcon = (status: string) => {
     if (status === "charging") return <ArrowUp className="h-3 w-3 text-primary" />;
     if (status === "discharging") return <ArrowDown className="h-3 w-3 text-chart-3" />;
     return <Zap className="h-3 w-3 text-muted-foreground" />;
   };
-
   return (
-    <div className={`relative p-4 rounded-lg border-2 transition-all hover:scale-105 cursor-pointer ${getChargeColor(module.charge)}`}>
+    <div className={`relative p-4 rounded-lg border-2 transition-all hover:scale-105 cursor-pointer ${getChargeColor(module.charge_pct)}`}>
       <div className="flex flex-col items-center space-y-2">
         <Battery className="h-8 w-8" />
-        <div className="text-lg font-bold">{module.charge}%</div>
-        <div className="text-xs opacity-75">{module.capacity} kWh</div>
+        <div className="text-lg font-bold">{module.charge_pct}%</div>
+        <div className="text-xs opacity-75">{module.capacity_kwh} kWh</div>
         <div className="flex items-center gap-1 text-xs">
           {getStatusIcon(module.status)}
-          <span>{module.power.toFixed(1)} kW</span>
+          <span>{Math.abs(module.power_kw).toFixed(1)} kW</span>
         </div>
-        <Progress value={module.charge} className="w-full h-1" />
+        <Progress value={module.charge_pct} className="w-full h-1" />
         <div className="absolute -top-2 -left-2 bg-card rounded-full px-2 py-1 text-xs font-semibold border shadow-sm">
           #{module.id}
         </div>
@@ -58,18 +43,54 @@ function BatteryModuleIcon({ module }: { module: typeof batteryModules[0] }) {
 }
 
 export default function BatteryPage() {
+  const { data, loading, error } = useBattery();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonChartCard height={120} />
+        <SkeletonChartCard height={400} />
+      </div>
+    );
+  }
+
+  if (error || !data?.battery) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Battery Energy Storage System</CardTitle>
+          <CardDescription>
+            {error
+              ? "Unable to load battery data."
+              : "No battery storage device is configured for your account. Add one in Settings to see live status here."}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const { battery, modules, history } = data;
+  const isCharging = battery.power_kw > 0.05;
+  const avgHealth = Math.round(
+    modules.reduce((s, m) => s + m.health_pct, 0) / Math.max(1, modules.length)
+  );
+  const avgTemp =
+    modules.reduce((s, m) => s + m.temperature_f, 0) / Math.max(1, modules.length);
+  const lastDischargeKwh = history
+    .filter((h) => h.power_kw < 0)
+    .reduce((s, h) => s + -h.power_kw, 0);
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Battery Energy Storage System</CardTitle>
           <CardDescription>
-            Monitor your 4-module Tesla Powerwall system with {totalCapacity} kWh total capacity
+            Monitor your {modules.length}-module {battery.name} system with {battery.capacity_kwh} kWh total capacity
           </CardDescription>
         </CardHeader>
       </Card>
 
-      {/* Key Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -79,12 +100,12 @@ export default function BatteryPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-2">{avgCharge}%</div>
-            <div className="text-sm text-muted-foreground">{totalStoredEnergy.toFixed(1)} kWh stored</div>
-            <Progress value={avgCharge} className="mt-2" />
+            <div className="text-3xl font-bold text-chart-2">{Math.round(battery.soc_percent)}%</div>
+            <div className="text-sm text-muted-foreground">{battery.soc_kwh.toFixed(1)} kWh stored</div>
+            <Progress value={battery.soc_percent} className="mt-2" />
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -93,27 +114,35 @@ export default function BatteryPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">+{totalChargingPower.toFixed(1)} kW</div>
+            <div className="text-3xl font-bold text-primary">
+              {battery.power_kw >= 0 ? "+" : ""}{battery.power_kw.toFixed(2)} kW
+            </div>
             <div className="text-sm text-primary flex items-center gap-1">
-              <ArrowUp className="h-3 w-3" />
-              Charging from solar
+              {isCharging ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+              {isCharging ? "Charging" : battery.power_kw < -0.05 ? "Discharging" : "Idle"}
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
               <Clock className="h-5 w-5 text-chart-5" />
-              Time to Full
+              {isCharging ? "Time to Full" : "Backup Time"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-chart-5">2.1 hrs</div>
-            <div className="text-sm text-muted-foreground">At current charge rate</div>
+            <div className="text-3xl font-bold text-chart-5">
+              {isCharging
+                ? `${battery.hours_to_full.toFixed(1)} hrs`
+                : `${(battery.soc_kwh / Math.max(0.5, 2.5)).toFixed(1)} hrs`}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {isCharging ? "At current charge rate" : "At 2.5 kW critical loads"}
+            </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -122,13 +151,12 @@ export default function BatteryPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">{avgHealth}%</div>
+            <div className="text-3xl font-bold text-primary">{battery.health_pct}%</div>
             <div className="text-sm text-muted-foreground">Excellent condition</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Individual Battery Modules */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -136,30 +164,31 @@ export default function BatteryPage() {
             Individual Battery Modules
           </CardTitle>
           <CardDescription>
-            Real-time status of each 13.5 kWh Powerwall unit
+            Real-time status of each {modules[0]?.capacity_kwh ?? 0} kWh unit
           </CardDescription>
           <CardAction>
             <Badge variant="default" className="bg-primary/15 text-primary border-primary/30">
-              All Systems Charging
+              {isCharging ? "All Modules Charging" : battery.power_kw < -0.05 ? "Discharging" : "Idle"}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {batteryModules.map((module) => (
+            {modules.map((module) => (
               <BatteryModuleIcon key={module.id} module={module} />
             ))}
           </div>
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div>
-                <span className="font-semibold">Total Capacity:</span> {totalCapacity} kWh
+                <span className="font-semibold">Total Capacity:</span> {battery.capacity_kwh} kWh
               </div>
               <div>
-                <span className="font-semibold">Energy Stored:</span> {totalStoredEnergy.toFixed(1)} kWh
+                <span className="font-semibold">Energy Stored:</span> {battery.soc_kwh.toFixed(1)} kWh
               </div>
               <div>
-                <span className="font-semibold">Charging Power:</span> +{totalChargingPower.toFixed(1)} kW
+                <span className="font-semibold">Current Power:</span> {battery.power_kw >= 0 ? "+" : ""}
+                {battery.power_kw.toFixed(2)} kW
               </div>
             </div>
           </div>
@@ -178,25 +207,28 @@ export default function BatteryPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Energy Stored</span>
-                <span className="font-semibold">245.2 kWh</span>
+                <span className="text-sm">Energy Stored Today</span>
+                <span className="font-semibold">{battery.charged_today_kwh.toFixed(1)} kWh</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Energy Released</span>
-                <span className="font-semibold">189.7 kWh</span>
+                <span className="text-sm">Energy Released Today</span>
+                <span className="font-semibold">{battery.discharged_today_kwh.toFixed(1)} kWh</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Net Storage</span>
-                <span className="font-semibold text-primary">+55.5 kWh</span>
+                <span className="font-semibold text-primary">
+                  {(battery.charged_today_kwh - battery.discharged_today_kwh) >= 0 ? "+" : ""}
+                  {(battery.charged_today_kwh - battery.discharged_today_kwh).toFixed(1)} kWh
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Efficiency</span>
+                <span className="text-sm">Round-trip Efficiency</span>
                 <span className="font-semibold">96.2%</span>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -209,19 +241,21 @@ export default function BatteryPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Average Temperature</span>
-                <span className="font-semibold">72.5°F</span>
+                <span className="font-semibold">{avgTemp.toFixed(1)}°F</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Cooling Status</span>
-                <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">Active</Badge>
+                <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">
+                  Active
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Safety Systems</span>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">Normal</Badge>
+                <span className="text-sm">Module Health (avg)</span>
+                <span className="font-semibold">{avgHealth}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Voltage Range</span>
-                <span className="font-semibold">398-402V</span>
+                <span className="text-sm">Max Power Rating</span>
+                <span className="font-semibold">{battery.max_flow_kw} kW</span>
               </div>
             </div>
           </CardContent>
@@ -247,12 +281,12 @@ export default function BatteryPage() {
                 <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Storm Watch</span>
-                <Badge variant="outline">Standby</Badge>
-              </div>
-              <div className="flex justify-between items-center">
                 <span className="text-sm">Peak Shaving</span>
                 <Badge variant="default" className="bg-chart-2/15 text-chart-2">Active</Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Reserve Floor</span>
+                <span className="font-semibold">15%</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Grid Services</span>
@@ -261,7 +295,7 @@ export default function BatteryPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -273,12 +307,12 @@ export default function BatteryPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Backup Time</span>
-                <span className="font-semibold">18.2 hours</span>
+                <span className="text-sm">Available Backup</span>
+                <span className="font-semibold">{Math.max(0, battery.soc_kwh - 0.15 * battery.capacity_kwh).toFixed(1)} kWh</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm">Critical Loads</span>
-                <span className="font-semibold">2.1 kW</span>
+                <span className="text-sm">Discharge Today</span>
+                <span className="font-semibold">{lastDischargeKwh.toFixed(1)} kWh</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Backup Mode</span>
@@ -292,34 +326,6 @@ export default function BatteryPage() {
           </CardContent>
         </Card>
       </div>
-      
-      {/* Monthly Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Monthly Summary</CardTitle>
-          <CardDescription>November 2024 storage performance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-chart-2">6.8 MWh</div>
-              <div className="text-sm text-muted-foreground">Energy Stored</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">$892</div>
-              <div className="text-sm text-muted-foreground">Peak Shaving Savings</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-chart-5">98.1%</div>
-              <div className="text-sm text-muted-foreground">Round-trip Efficiency</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-chart-3">127</div>
-              <div className="text-sm text-muted-foreground">Cycles Completed</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
-} 
+}

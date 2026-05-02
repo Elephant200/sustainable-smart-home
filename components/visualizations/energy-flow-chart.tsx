@@ -17,46 +17,36 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-
-const energyFlowData = [
-  { time: "00:00", solar: 0, battery: -8.2, house: 2.1, ev: 18.7, grid: -12.6 },
-  { time: "02:00", solar: 0, battery: -9.1, house: 1.8, ev: 18.7, grid: -11.4 },
-  { time: "04:00", solar: 0, battery: -6.8, house: 1.9, ev: 15.4, grid: -9.5 },
-  { time: "06:00", solar: 0.8, battery: -4.2, house: 2.3, ev: 7.2, grid: -5.5 },
-  { time: "08:00", solar: 2.1, battery: -1.8, house: 2.8, ev: 7.2, grid: -5.3 },
-  { time: "10:00", solar: 3.8, battery: 0.5, house: 3.2, ev: 7.2, grid: -6.7 },
-  { time: "12:00", solar: 4.6, battery: 1.2, house: 3.4, ev: 7.2, grid: -7.2 },
-  { time: "14:00", solar: 4.2, battery: 0.8, house: 3.1, ev: 0, grid: 0.3 },
-  { time: "16:00", solar: 3.5, battery: 0.4, house: 2.9, ev: 0, grid: 0.2 },
-  { time: "18:00", solar: 1.8, battery: -0.8, house: 3.5, ev: 0, grid: -0.9 },
-  { time: "20:00", solar: 0.2, battery: -2.1, house: 2.8, ev: 0, grid: -0.5 },
-  { time: "22:00", solar: 0, battery: -5.5, house: 2.2, ev: 11.5, grid: -8.2 },
-];
+import { SkeletonChartCard } from "@/components/ui/skeleton"
+import { useFlows } from "@/lib/hooks/use-energy-data"
 
 const chartConfig = {
-  solar: {
-    label: "Solar Generation",
-    color: "hsl(var(--chart-1))",
-  },
-  battery: {
-    label: "Battery Storage",
-    color: "hsl(var(--chart-2))",
-  },
-  house: {
-    label: "House Load",
-    color: "hsl(var(--chart-4))",
-  },
-  ev: {
-    label: "EV Charging",
-    color: "hsl(var(--chart-5))",
-  },
-  grid: {
-    label: "Grid Exchange",
-    color: "hsl(var(--chart-3))",
-  },
+  solar: { label: "Solar Generation", color: "hsl(var(--chart-1))" },
+  battery: { label: "Battery Storage", color: "hsl(var(--chart-2))" },
+  house: { label: "House Load", color: "hsl(var(--chart-4))" },
+  ev: { label: "EV Charging", color: "hsl(var(--chart-5))" },
+  grid: { label: "Grid Exchange", color: "hsl(var(--chart-3))" },
 } satisfies ChartConfig
 
+function fmtTime(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, "0")}:00`
+}
+
 export function EnergyFlowChart() {
+  const { data, loading, error } = useFlows("24h")
+
+  if (loading) return <SkeletonChartCard height={400} />
+
+  const points = (data?.points ?? []).map((p) => ({
+    time: fmtTime(p.timestamp),
+    solar: p.solar_kw,
+    battery: -p.battery_kw,
+    house: p.house_kw,
+    ev: p.ev_kw,
+    grid: -p.grid_kw,
+  }))
+
   return (
     <Card>
       <CardHeader>
@@ -65,28 +55,27 @@ export function EnergyFlowChart() {
           Energy Flow Analysis
         </CardTitle>
         <CardDescription>
-          24-hour energy flow between solar, battery, house, EV, and grid (kW)
+          {error
+            ? "Unable to load flow data."
+            : "24-hour energy flow between solar, battery, house, EV, and grid (kW)"}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          config={chartConfig}
-          className="aspect-auto h-[400px] w-full"
-        >
-          <LineChart data={energyFlowData}>
+        <ChartContainer config={chartConfig} className="aspect-auto h-[400px] w-full">
+          <LineChart data={points}>
             <CartesianGrid vertical={false} />
-            <XAxis 
-              dataKey="time" 
+            <XAxis
+              dataKey="time"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
               minTickGap={32}
             />
-            <YAxis 
+            <YAxis
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(value) => `${value > 0 ? '+' : ''}${value} kW`}
+              tickFormatter={(value) => `${value > 0 ? "+" : ""}${value} kW`}
             />
             <ChartTooltip
               cursor={false}
@@ -94,41 +83,17 @@ export function EnergyFlowChart() {
                 <ChartTooltipContent
                   labelFormatter={(value) => `Time: ${value}`}
                   formatter={(value, name) => [
-                    `${Number(value) > 0 ? '+' : ''}${value} kW`,
-                    chartConfig[name as keyof typeof chartConfig]?.label || name
+                    `${Number(value) > 0 ? "+" : ""}${value} kW`,
+                    chartConfig[name as keyof typeof chartConfig]?.label ?? name,
                   ]}
                   indicator="dot"
                 />
               }
             />
-            <Line
-              dataKey="solar"
-              type="monotone"
-              stroke="var(--color-solar)"
-              strokeWidth={3}
-              dot={false}
-            />
-            <Line
-              dataKey="battery"
-              type="monotone"
-              stroke="var(--color-battery)"
-              strokeWidth={2}
-              dot={false}
-            />
-            <Line
-              dataKey="house"
-              type="monotone"
-              stroke="var(--color-house)"
-              strokeWidth={2}
-              dot={false}
-            />
-            <Line
-              dataKey="ev"
-              type="monotone"
-              stroke="var(--color-ev)"
-              strokeWidth={2}
-              dot={false}
-            />
+            <Line dataKey="solar" type="monotone" stroke="var(--color-solar)" strokeWidth={3} dot={false} />
+            <Line dataKey="battery" type="monotone" stroke="var(--color-battery)" strokeWidth={2} dot={false} />
+            <Line dataKey="house" type="monotone" stroke="var(--color-house)" strokeWidth={2} dot={false} />
+            <Line dataKey="ev" type="monotone" stroke="var(--color-ev)" strokeWidth={2} dot={false} />
             <Line
               dataKey="grid"
               type="monotone"
@@ -142,4 +107,4 @@ export function EnergyFlowChart() {
       </CardContent>
     </Card>
   )
-} 
+}

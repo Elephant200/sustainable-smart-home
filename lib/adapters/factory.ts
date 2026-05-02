@@ -5,8 +5,26 @@ import { EnphaseAdapter } from './providers/enphase';
 import { HomeAssistantAdapter } from './providers/home-assistant';
 import { SolarEdgeAdapter } from './providers/solaredge';
 import { EmporiaAdapter } from './providers/emporia';
+import type { SolarArrayConfig } from '@/lib/simulation/solar';
+import type { BatteryDeviceConfig } from '@/lib/simulation/battery';
+import type { EvDeviceConfig } from '@/lib/simulation/ev';
 
-export function createAdapter(device: DeviceRecord): DeviceAdapter {
+/**
+ * Cross-device context passed to the SimulatedAdapter so battery/EV/grid
+ * status reflects the full system (e.g., available solar surplus). Real
+ * provider adapters ignore it because the upstream API already has full
+ * site context.
+ */
+export interface AdapterContext {
+  solar?: SolarArrayConfig[];
+  ev?: EvDeviceConfig[];
+  battery?: BatteryDeviceConfig | null;
+}
+
+export function createAdapter(
+  device: DeviceRecord,
+  context?: AdapterContext
+): DeviceAdapter {
   const providerType: ProviderType = device.provider_type ?? 'simulated';
 
   switch (providerType) {
@@ -22,7 +40,7 @@ export function createAdapter(device: DeviceRecord): DeviceAdapter {
       return new EmporiaAdapter(device);
     case 'simulated':
     default:
-      return new SimulatedAdapter(device);
+      return new SimulatedAdapter(device, context);
   }
 }
 

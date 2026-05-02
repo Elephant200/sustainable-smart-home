@@ -23,6 +23,7 @@ export interface DeviceRecord {
   battery_config?: {
     capacity_kwh: number;
     max_flow_kw: number;
+    module_count?: number;
   };
   ev_config?: {
     battery_capacity_kwh: number;
@@ -30,6 +31,16 @@ export interface DeviceRecord {
     departure_time: string;
     charger_power_kw: number;
   };
+}
+
+export interface BatteryModule {
+  id: number;
+  charge_pct: number;
+  capacity_kwh: number;
+  health_pct: number;
+  temperature_f: number;
+  power_kw: number;
+  status: 'charging' | 'discharging' | 'idle';
 }
 
 export interface DeviceStatus {
@@ -40,6 +51,15 @@ export interface DeviceStatus {
   batterySOCPercent?: number;
   batterySOCKwh?: number;
   batteryPowerKw?: number;
+  /** Total nameplate capacity reported by the provider, in kWh. */
+  batteryCapacityKwh?: number;
+  /** Maximum charge/discharge rate reported by the provider, in kW. */
+  batteryMaxFlowKw?: number;
+  /** Per-module breakdown for batteries (count derived per-device). */
+  batteryModules?: BatteryModule[];
+  /** Average health across modules; derived in the adapter so swapping to
+   * a real provider yields the provider's reported health values. */
+  batteryHealthPct?: number;
   evSOCPercent?: number;
   evChargeRateKw?: number;
   evPluggedIn?: boolean;

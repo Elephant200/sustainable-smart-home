@@ -17,6 +17,14 @@ export interface BatteryDeviceConfig {
   id: string;
   capacity_kwh: number;
   max_flow_kw: number;
+  /**
+   * Optional explicit module count. When omitted we derive it from capacity
+   * (~1 module per 13.5 kWh, matching typical residential battery sizing
+   * such as the Tesla Powerwall). This means a 27 kWh stack reports 2
+   * modules, a 40.5 kWh stack reports 3, and a 13.5 kWh stack reports 1 —
+   * never the previously-hardcoded 4.
+   */
+  module_count?: number;
 }
 
 export interface BatteryInstantState {
@@ -26,6 +34,17 @@ export interface BatteryInstantState {
 }
 
 const STARTING_SOC_FRACTION = 0.4;
+const NOMINAL_MODULE_KWH = 13.5;
+
+/**
+ * Derive the number of physical modules for a battery device. Honors an
+ * explicit module_count if the device was configured with one, otherwise
+ * falls back to one module per ~13.5 kWh of total capacity.
+ */
+export function getBatteryModuleCount(cfg: BatteryDeviceConfig): number {
+  if (cfg.module_count && cfg.module_count > 0) return cfg.module_count;
+  return Math.max(1, Math.round(cfg.capacity_kwh / NOMINAL_MODULE_KWH));
+}
 
 function stepBattery(
   prevSocKwh: number,

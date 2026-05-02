@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
+import { createAdapter } from '@/lib/adapters';
 import {
   solveFlows,
   solveFlowsHistory,
@@ -69,13 +70,39 @@ export async function GET() {
     }
   }
 
-  const moduleCount = battery ? 4 : 0;
-  const batteryHealthPct = battery
-    ? Array.from({ length: moduleCount }, (_, i) => 96 + (i % 4)).reduce(
-        (s, v) => s + v,
-        0
-      ) / Math.max(1, moduleCount)
-    : null;
+  // Battery health: query each battery device's adapter for its modules and
+  // average across all modules from all batteries. Module count is derived
+  // per-device (no longer hardcoded to 4) and the same code path supports
+  // real-hardware providers since they implement the same DeviceAdapter
+  // interface.
+  const batteryDevices = context.rawDevices.filter((d) => d.type === 'battery');
+  let batteryHealthPct: number | null = null;
+  if (batteryDevices.length > 0) {
+    const statuses = await Promise.all(
+      batteryDevices.map((d) =>
+        createAdapter(d, {
+          solar: context.solarConfigs,
+          ev: context.evConfigs,
+          battery: context.batteryConfigs.find((b) => b.id === d.id) ?? null,
+        }).getStatus()
+      )
+    );
+    const allModules = statuses.flatMap((s) => s.batteryModules ?? []);
+    if (allModules.length > 0) {
+      batteryHealthPct =
+        allModules.reduce((s, m) => s + m.health_pct, 0) / allModules.length;
+    } else {
+      // Fallback: providers that don't expose module-level data may still
+      // report an aggregate batteryHealthPct on DeviceStatus.
+      const reported = statuses
+        .map((s) => s.batteryHealthPct)
+        .filter((v): v is number => typeof v === 'number');
+      if (reported.length > 0) {
+        batteryHealthPct =
+          reported.reduce((s, v) => s + v, 0) / reported.length;
+      }
+    }
+  }
 
   const solarPanelInstant = context.solarConfigs[0]
     ? computeSolarArrayInstant(context.solarConfigs[0], now)
@@ -85,7 +112,7 @@ export async function GET() {
     current: currentFlow,
     todayFlows,
     solarPanelInstant,
-    batteryHealthPct: batteryHealthPct ?? 98,
+    batteryHealthPct: batteryHealthPct ?? 100,
     evCount: context.evConfigs.length,
   });
   const activeWarnings = alerts.filter(

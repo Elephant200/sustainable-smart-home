@@ -1,4 +1,5 @@
 import {
+  BatteryModule,
   DeviceAdapter,
   DeviceCommand,
   DeviceRecord,
@@ -19,12 +20,41 @@ import {
   computeEvChargeRateKw,
   computeHouseLoadInstant,
   computeBatteryHistory,
+  getBatteryModuleCount,
   isOvernightWindow,
   solveFlows,
   type SolarArrayConfig,
   type BatteryDeviceConfig,
+  type BatteryInstantState,
   type EvDeviceConfig,
 } from '@/lib/simulation';
+
+function buildBatteryModules(
+  cfg: BatteryDeviceConfig,
+  instant: BatteryInstantState
+): BatteryModule[] {
+  const moduleCount = getBatteryModuleCount(cfg);
+  const perModuleCapacity = cfg.capacity_kwh / moduleCount;
+  const status: BatteryModule['status'] =
+    instant.power_kw > 0.05
+      ? 'charging'
+      : instant.power_kw < -0.05
+        ? 'discharging'
+        : 'idle';
+  return Array.from({ length: moduleCount }, (_, i) => {
+    const variation = 0.96 + ((i * 7919) % 100) / 2500;
+    const charge = Math.max(0, Math.min(100, instant.soc_percent * variation));
+    return {
+      id: i + 1,
+      charge_pct: Math.round(charge),
+      capacity_kwh: Math.round(perModuleCapacity * 10) / 10,
+      health_pct: 96 + (i % 4),
+      temperature_f: 70 + ((i * 13) % 6),
+      power_kw: Math.round((instant.power_kw / moduleCount) * 100) / 100,
+      status,
+    };
+  });
+}
 
 /**
  * Simulated provider — uses the deterministic physics library.
@@ -90,6 +120,7 @@ export class SimulatedAdapter implements DeviceAdapter {
         id: this.device.id,
         capacity_kwh: this.device.battery_config.capacity_kwh,
         max_flow_kw: this.device.battery_config.max_flow_kw,
+        module_count: this.device.battery_config.module_count,
       };
     }
     return null;
@@ -127,12 +158,14 @@ export class SimulatedAdapter implements DeviceAdapter {
       case 'battery': {
         const cfg = this.device.battery_config;
         if (cfg) {
+          const batteryCfg: BatteryDeviceConfig = {
+            id: this.device.id,
+            capacity_kwh: cfg.capacity_kwh,
+            max_flow_kw: cfg.max_flow_kw,
+            module_count: cfg.module_count,
+          };
           const inst = computeBatteryStateAt(
-            {
-              id: this.device.id,
-              capacity_kwh: cfg.capacity_kwh,
-              max_flow_kw: cfg.max_flow_kw,
-            },
+            batteryCfg,
             now,
             this.context.solar,
             this.context.ev
@@ -140,6 +173,12 @@ export class SimulatedAdapter implements DeviceAdapter {
           status.batterySOCPercent = inst.soc_percent;
           status.batterySOCKwh = inst.soc_kwh;
           status.batteryPowerKw = inst.power_kw;
+          status.batteryCapacityKwh = batteryCfg.capacity_kwh;
+          status.batteryMaxFlowKw = batteryCfg.max_flow_kw;
+          const modules = buildBatteryModules(batteryCfg, inst);
+          status.batteryModules = modules;
+          status.batteryHealthPct =
+            modules.reduce((s, m) => s + m.health_pct, 0) / modules.length;
         }
         break;
       }

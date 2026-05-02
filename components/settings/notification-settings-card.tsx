@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -49,6 +49,18 @@ const DEFAULTS: Record<Channel, boolean> = {
   grid_events: true,
 };
 
+const prefsListeners = new Set<() => void>();
+
+function subscribeToPrefs(cb: () => void): () => void {
+  prefsListeners.add(cb);
+  const handleStorage = (e: StorageEvent) => { if (e.key === STORAGE_KEY) cb(); };
+  window.addEventListener("storage", handleStorage);
+  return () => {
+    prefsListeners.delete(cb);
+    window.removeEventListener("storage", handleStorage);
+  };
+}
+
 function loadPrefs(): Record<Channel, boolean> {
   if (typeof window === "undefined") return DEFAULTS;
   try {
@@ -65,25 +77,23 @@ function savePrefs(prefs: Record<Channel, boolean>) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    prefsListeners.forEach((cb) => cb());
   } catch {
     // localStorage may be unavailable (private mode, quota); preferences
     // simply won't persist across sessions in that case.
   }
 }
 
-export function NotificationSettingsCard() {
-  const [prefs, setPrefs] = useState<Record<Channel, boolean>>(DEFAULTS);
-  const [hydrated, setHydrated] = useState(false);
+function getHydrated() { return true; }
+function getHydratedServer() { return false; }
+function noopSubscribe() { return () => {}; }
 
-  useEffect(() => {
-    setPrefs(loadPrefs());
-    setHydrated(true);
-  }, []);
+export function NotificationSettingsCard() {
+  const prefs = useSyncExternalStore(subscribeToPrefs, loadPrefs, () => DEFAULTS);
+  const hydrated = useSyncExternalStore(noopSubscribe, getHydrated, getHydratedServer);
 
   const toggle = (id: Channel, value: boolean) => {
-    const next = { ...prefs, [id]: value };
-    setPrefs(next);
-    savePrefs(next);
+    savePrefs({ ...prefs, [id]: value });
   };
 
   const groups = Array.from(new Set(CHANNELS.map((c) => c.group)));

@@ -350,5 +350,4 @@ export async function generateWeekOfSolarData(userId: string): Promise<void> {
     console.error('Error generating week of solar data:', error);
     throw error;
   }
-} 
-generateWeekOfSolarData('df7510ba-a2d5-4ead-a35a-9f25bf2132f8');
+}

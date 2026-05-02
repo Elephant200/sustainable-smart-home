@@ -4,18 +4,19 @@ import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+const NOOP_SUBSCRIBE = () => () => {};
 
 export function NotFoundContent() {
   const router = useRouter();
   const pathname = usePathname();
-  const [fullUrl, setFullUrl] = useState(pathname);
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setFullUrl(window.location.origin + pathname);
-    }
-  }, [pathname]);
+  const fullUrl = useSyncExternalStore(
+    NOOP_SUBSCRIBE,
+    () => window.location.origin + pathname,
+    () => pathname
+  );
 
   return (
     <div className="flex-1 flex items-center justify-center p-4">
@@ -37,18 +38,18 @@ export function NotFoundContent() {
             </p>
           </div>
         </div>
-        
+
         <div className="space-y-3">
-          <Button 
-            onClick={() => router.back()} 
+          <Button
+            onClick={() => router.back()}
             variant="default"
             className="w-full"
           >
             Go Back
           </Button>
-          
-          <Button 
-            asChild 
+
+          <Button
+            asChild
             variant="outline"
             className="w-full"
           >
@@ -60,4 +61,4 @@ export function NotFoundContent() {
       </Card>
     </div>
   );
-} 
+}

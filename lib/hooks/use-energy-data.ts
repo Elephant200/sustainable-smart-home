@@ -9,38 +9,41 @@ interface FetchState<T> {
   refetch: () => void;
 }
 
+interface ResolvedState<T> {
+  data: T | null;
+  error: string | null;
+  url: string;
+  tick: number;
+}
+
 function useFetch<T>(url: string): FetchState<T> {
-  const [state, setState] = useState<{
-    data: T | null;
-    loading: boolean;
-    error: string | null;
-  }>({
-    data: null,
-    loading: true,
-    error: null,
-  });
-  // Bumping `tick` forces the effect to re-run, giving callers a clean
-  // refetch contract without leaking AbortControllers or fetch internals.
   const [tick, setTick] = useState(0);
   const refetch = useCallback(() => setTick((n) => n + 1), []);
 
+  const [resolved, setResolved] = useState<ResolvedState<T>>({
+    data: null,
+    error: null,
+    url: '',
+    tick: -1,
+  });
+
   useEffect(() => {
     let cancelled = false;
-    setState((s) => ({ ...s, loading: true }));
     fetch(url, { cache: 'no-store' })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json() as Promise<T>;
       })
       .then((data) => {
-        if (!cancelled) setState({ data, loading: false, error: null });
+        if (!cancelled) setResolved({ data, error: null, url, tick });
       })
       .catch((err) => {
         if (!cancelled)
-          setState({
+          setResolved({
             data: null,
-            loading: false,
             error: err instanceof Error ? err.message : 'Request failed',
+            url,
+            tick,
           });
       });
     return () => {
@@ -48,7 +51,9 @@ function useFetch<T>(url: string): FetchState<T> {
     };
   }, [url, tick]);
 
-  return { ...state, refetch };
+  const loading = resolved.url !== url || resolved.tick !== tick;
+
+  return { data: resolved.data, loading, error: resolved.error, refetch };
 }
 
 export interface SnapshotResponse {

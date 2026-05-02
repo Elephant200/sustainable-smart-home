@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -14,21 +13,15 @@ import { Button } from "@/components/ui/button";
 export function ConfigurationAlert() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
-  
-    useEffect(() => {
-    const shouldConfigure = searchParams.get("configure") === "true";
-    if (shouldConfigure) {
-      setIsOpen(true);
-    }
-  }, [searchParams]);
+  const router = useRouter();
+
+  const isOpen = searchParams.get("configure") === "true";
 
   const handleClose = () => {
-    setIsOpen(false);
     const newSearchParams = new URLSearchParams(searchParams);
     newSearchParams.delete("configure");
     const newUrl = `${pathname}${newSearchParams.toString() ? `?${newSearchParams.toString()}` : ''}`;
-    window.history.replaceState(null, '', newUrl);
+    router.replace(newUrl, { scroll: false });
   };
 
   return (
@@ -51,4 +44,4 @@ export function ConfigurationAlert() {
       </DialogContent>
     </Dialog>
   );
-} 
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,48 +60,59 @@ export function AddDeviceDialog({
   const [connectionConfig, setConnectionConfig] = useState<Record<string, string>>({});
   const [showProviderFields, setShowProviderFields] = useState(false);
 
+  // Re-initialise form state when the dialog opens or the editing target changes.
+  // React's "setState during render" pattern: when sessionId changes React will
+  // discard the current render output and immediately re-render with updated state,
+  // so no effect or async microtask is needed.
+  const sessionId = isOpen && deviceType
+    ? `${deviceType}|${editingDevice?.id ?? 'new'}|${existingDevices.length}`
+    : '';
+  const [lastSessionId, setLastSessionId] = useState('');
+
+  if (!sessionId && lastSessionId !== '') {
+    // Dialog closed — clear session so the next open always re-initialises
+    setLastSessionId('');
+  } else if (sessionId && sessionId !== lastSessionId) {
+    setLastSessionId(sessionId);
+    if (editingDevice) {
+      const configData: Record<string, unknown> = { ...editingDevice.config };
+      if (
+        configData.departure_time &&
+        deviceType === 'ev' &&
+        typeof configData.departure_time === 'string'
+      ) {
+        const timeStr = configData.departure_time;
+        if (timeStr.includes('T')) {
+          configData.departure_time = timeStr.split('T')[1].substring(0, 5);
+        } else if (timeStr.includes('+') || timeStr.includes('-')) {
+          configData.departure_time = timeStr.substring(0, 5);
+        }
+      }
+      setFormData({ name: editingDevice.name, ...configData });
+      setSelectedProvider((editingDevice.provider_type as ProviderType) ?? 'simulated');
+      setConnectionConfig({});
+    } else if (deviceType) {
+      const typeNames: Record<DeviceType, string> = {
+        solar_array: 'Solar Array',
+        battery: 'Battery',
+        ev: 'Electric Vehicle',
+        grid: 'Electrical Grid',
+        house: 'House Monitor',
+      };
+      const generateName = (type: DeviceType): string => {
+        if (type === 'grid' || type === 'house') return typeNames[type];
+        const existingOfType = existingDevices.filter((d) => d.type === type);
+        return `${typeNames[type]} ${existingOfType.length + 1}`;
+      };
+      setFormData({ name: generateName(deviceType) });
+      setSelectedProvider('simulated');
+      setConnectionConfig({});
+      setShowProviderFields(false);
+    }
+  }
+
   const activeSchema: ConnectionSchema =
     providerSchemas.find((s) => s.providerType === selectedProvider) ?? providerSchemas[0];
-
-  useEffect(() => {
-    if (isOpen && deviceType) {
-      if (editingDevice) {
-        const configData = { ...editingDevice.config };
-        if (
-          configData.departure_time &&
-          deviceType === 'ev' &&
-          typeof configData.departure_time === 'string'
-        ) {
-          const timeStr = configData.departure_time;
-          if (timeStr.includes('T')) {
-            configData.departure_time = timeStr.split('T')[1].substring(0, 5);
-          } else if (timeStr.includes('+') || timeStr.includes('-')) {
-            configData.departure_time = timeStr.substring(0, 5);
-          }
-        }
-        setFormData({ name: editingDevice.name, ...configData });
-        setSelectedProvider((editingDevice.provider_type as ProviderType) ?? 'simulated');
-        setConnectionConfig({});
-      } else {
-        const generateName = (type: DeviceType): string => {
-          const typeNames: Record<DeviceType, string> = {
-            solar_array: 'Solar Array',
-            battery: 'Battery',
-            ev: 'Electric Vehicle',
-            grid: 'Electrical Grid',
-            house: 'House Monitor',
-          };
-          if (type === 'grid' || type === 'house') return typeNames[type];
-          const existingOfType = existingDevices.filter((d) => d.type === type);
-          return `${typeNames[type]} ${existingOfType.length + 1}`;
-        };
-        setFormData({ name: generateName(deviceType) });
-        setSelectedProvider('simulated');
-        setConnectionConfig({});
-        setShowProviderFields(false);
-      }
-    }
-  }, [isOpen, deviceType, editingDevice, existingDevices]);
 
   const handleClose = () => {
     setStep('form');

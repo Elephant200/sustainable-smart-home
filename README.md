@@ -17,7 +17,7 @@
 
 ---
 
-> **⚠️ Demo Notice:** This application currently generates simulated energy data due to the lack of physical hardware integration. While the platform cannot yet connect to actual solar panels, batteries, or EV chargers, it provides a comprehensive preview of the full energy management experience with realistic data patterns. The interface, analytics, and user experience are fully functional and demonstrate the complete feature set! 🚀
+> **Live provider support:** The platform connects to real hardware via five provider adapters — Tesla Fleet API, Enphase Enlighten v4, SolarEdge Monitoring API, Home Assistant REST, and Emporia Vue. Add a device in Settings and enter your credentials to switch from simulated data to live readings. Simulated data is still available for devices without physical hardware.
 
 ---
 
@@ -80,22 +80,21 @@
 - **[Lucide React](https://lucide.dev/)** - Beautiful icon set
 
 ### **Backend & Database**
-- **[Supabase](https://supabase.com/)** - PostgreSQL database with real-time subscriptions
+- **[Supabase](https://supabase.com/)** - PostgreSQL database with Row-Level Security
 - **Row-Level Security (RLS)** - Secure, user-scoped data access
-- **Real-time subscriptions** - Live updates for energy data
-- **Edge Functions** - Serverless API endpoints
+- **Next.js Route Handlers** - Serverless API endpoints
 
 ### **Authentication & Security**
 - **Supabase Auth** - Email/password authentication with session management
 - **Cookie-based sessions** - Secure authentication across SSR and client
 - **Middleware protection** - Route-level access control
+- **AES-256-GCM encryption** - Device credentials encrypted at rest
 - **GDPR compliant** - User data privacy and account deletion
 
 ### **Development Tools**
-- **ESLint** - Code linting and formatting
+- **ESLint** - Code linting (including custom Tailwind color-class rule)
 - **Tailwind CSS IntelliSense** - Enhanced development experience
 - **TypeScript strict mode** - Maximum type safety
-- **Git hooks** - Pre-commit code quality checks
 
 ---
 
@@ -139,13 +138,30 @@ pnpm install
    cp .env.example .env.local
    ```
 
-2. Update `.env.local` with your Supabase credentials:
+2. Update `.env.local` with your credentials:
    ```env
+   # Supabase (required)
    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+   # Credential encryption (required)
+   CONNECTION_CONFIG_SECRET=64_char_hex_string_for_encrypting_device_creds
+
+   # Location features (required for map/carbon intensity)
+   ELECTRICITYMAPS_API_KEY=your_electricitymaps_key
+   GOOGLE_MAPS_API_KEY=your_google_maps_key
+
+   # Live provider OAuth fallbacks (optional — can also be stored per-device)
+   TESLA_CLIENT_ID=your_tesla_fleet_oauth_client_id
+   ENPHASE_CLIENT_ID=your_enphase_enlighten_client_id
+   ENPHASE_CLIENT_SECRET=your_enphase_enlighten_client_secret
+
+   # Home Assistant SSRF allowlist (optional — comma-separated private hosts)
+   HOME_ASSISTANT_ALLOWED_HOSTS=192.168.1.100,homeassistant.local
    ```
 
-   > 💡 Find these values in your [Supabase project settings](https://supabase.com/dashboard/project/_/settings/api)
+   > 💡 Find Supabase values in your [project settings](https://supabase.com/dashboard/project/_/settings/api). Generate the encryption key with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 
 ### **4. Database Setup**
 
@@ -156,9 +172,9 @@ pnpm install
    # Copy and execute the contents of supabase/schema.sql
    ```
 
-3. (Optional) Populate with sample data:
-   ```bash
-   npm run populate-db
+3. (Optional) Populate with simulated historical data by visiting this URL after starting the dev server:
+   ```
+   GET /api/populate-database?action=populate
    ```
 
 ### **5. Start Development Server**
@@ -176,33 +192,51 @@ Open [http://localhost:3000](http://localhost:3000) to view your application! �
 ```
 sustainable-smart-home/
 ├── app/                          # Next.js App Router
-│   ├── api/                      # API routes
-│   │   ├── configuration/        # Device configuration endpoints
-│   │   ├── grid-data/           # Grid carbon intensity data
-│   │   ├── house-load-data/     # House energy consumption
-│   │   └── solar-generation-data/ # Solar panel production
+│   ├── api/                      # API route handlers
+│   │   ├── configuration/        # Device CRUD + location geocoding
+│   │   ├── energy/              # Energy data endpoints
+│   │   │   ├── snapshot/        # Real-time system snapshot
+│   │   │   ├── flows/           # Historical power flow series
+│   │   │   ├── analytics/       # Savings, carbon, and health metrics
+│   │   │   ├── alerts/          # System alert generation
+│   │   │   ├── solar/           # Solar panels and history
+│   │   │   ├── battery/         # Battery status and history
+│   │   │   ├── ev/              # EV charging data
+│   │   │   └── house/           # House load history
+│   │   ├── grid-data/           # Grid carbon intensity
+│   │   └── populate-database/   # Dev utility: seed historical data
 │   ├── app/                     # Protected dashboard pages
+│   │   ├── alerts/             # System notifications
 │   │   ├── analytics/           # Energy analytics and insights
-│   │   ├── battery/            # Battery monitoring and control
+│   │   ├── battery/            # Battery monitoring
 │   │   ├── ev-charging/        # EV charging management
-│   │   ├── settings/           # Device configuration
+│   │   ├── settings/           # Device and account configuration
 │   │   └── solar/              # Solar panel monitoring
 │   ├── auth/                   # Authentication pages
-│   └── globals.css             # Global styles and theme
+│   └── globals.css             # Global styles and CSS variables
 ├── components/                 # Reusable React components
-│   ├── auth/                  # Authentication components
-│   ├── layout/                # Layout and navigation
-│   ├── settings/              # Configuration components
+│   ├── auth/                  # Login, sign-up, password forms
+│   ├── layout/                # Navigation, topbar, error pages
+│   ├── settings/              # Device config, notifications, theme
 │   ├── ui/                    # Base UI components (shadcn/ui)
-│   └── visualizations/        # Charts and energy diagrams
-├── lib/                       # Utilities and configurations
-│   ├── data-generator/        # Sample data generation
-│   ├── supabase/             # Database client and middleware
-│   └── utils.ts              # Helper functions
-├── supabase/                 # Database schema and functions
-│   ├── schema.sql            # Database table definitions
+│   └── visualizations/        # Charts and energy flow diagrams
+├── lib/                       # Server and shared utilities
+│   ├── adapters/              # Device adapter abstraction layer
+│   │   └── providers/         # Tesla, Enphase, SolarEdge, HA, Emporia
+│   ├── crypto/               # AES-256-GCM credential encryption
+│   ├── data-generator/       # Deterministic fake data for SimulatedAdapter
+│   ├── hooks/                # React data-fetching hooks (use-energy-data)
+│   ├── server/               # Server-only: adapter flows, device context
+│   ├── simulation/           # Physics models: solar, battery, EV, alerts
+│   ├── supabase/             # Supabase client and middleware helpers
+│   └── utils.ts              # Shared utility functions
+├── scripts/                  # Build/lint scripts
+│   └── check-no-hardcoded-colors.mjs  # Enforces semantic color token usage
+├── supabase/                 # Database schema and migration files
+│   ├── schema.sql            # Complete table definitions
+│   ├── migrations/           # Incremental schema changes
 │   └── schema_desc.md        # Schema documentation
-└── middleware.ts             # Route protection and auth
+└── middleware.ts             # Route protection and session refresh
 ```
 
 ---
@@ -248,19 +282,16 @@ All API endpoints require valid authentication. Include the session cookie or au
 - `DELETE /api/configuration/devices/[id]` - Remove device
 
 #### **Energy Data**
-- `GET /api/grid-data` - Grid carbon intensity (public endpoint)
-
-### **Response Format**
-
-All API responses follow this structure:
-```json
-{
-  "success": true,
-  "data": { ... },
-  "error": null,
-  "timestamp": "2025-01-01T00:00:00Z"
-}
-```
+- `GET /api/energy/snapshot` - Real-time system snapshot (power flows, device states)
+- `GET /api/energy/flows?range=24h` - Historical power flow series (24h / 7d / 3m / 1y)
+- `GET /api/energy/analytics` - Savings, carbon, and system health summary
+- `GET /api/energy/alerts` - Active system alerts and notifications
+- `GET /api/energy/solar/panels` - Per-array solar status
+- `GET /api/energy/solar/history?range=24h` - Solar generation history
+- `GET /api/energy/battery` - Battery status and charge history
+- `GET /api/energy/ev` - EV charge levels and scheduling
+- `GET /api/energy/house/history?range=24h` - House load history
+- `GET /api/grid-data` - Grid carbon intensity for configured location
 
 ---
 

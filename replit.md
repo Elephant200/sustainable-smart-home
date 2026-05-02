@@ -106,11 +106,11 @@ The **Snapshot route** uses `pickHouseDevice` / `pickGridDevice` (in `lib/server
 
 ### Data Generation
 
-`lib/data-generator/` provides deterministic fake data:
+`lib/data-generator/` provides deterministic fake data used by the `SimulatedAdapter` and the `populate-database` utility route:
 - Solar irradiance model uses sun angle + season + weather randomness
 - House load model uses time-of-day patterns + seasonal HVAC factors + appliance spikes
-- `client-generators.ts` exposes browser-safe versions for React hooks
-- `lib/hooks/use-data-generation.ts` provides `useSolarData`, `useHouseLoadData`, `useUserDevices` hooks that fetch device config from Supabase then generate or fetch data through adapters
+- `client-generators.ts` exposes browser-safe versions of the generator types
+- `populate-database.ts` populates the Supabase database with a full year of simulated historical data (accessible via `GET /api/populate-database?action=populate`)
 
 ### Authentication Flow
 
@@ -129,19 +129,38 @@ The **Snapshot route** uses `pickHouseDevice` / `pickGridDevice` (in `lib/server
 | **Supabase** | PostgreSQL database + Auth + Row Level Security. Requires `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` env vars |
 | **Vercel** | Intended deployment target (`VERCEL_URL` env var used for `metadataBase`) |
 | **Google Fonts** | Inter + Fraunces loaded via `next/font/google` at build time |
-| **Tesla API** (future) | EV and Powerwall integration via `TeslaAdapter` |
-| **Enphase API** (future) | Solar microinverter data via `EnphaseAdapter` |
-| **SolarEdge API** (future) | Solar inverter data via `SolarEdgeAdapter` |
-| **Home Assistant** (future) | Local smart home hub integration via `HomeAssistantAdapter` |
-| **Emporia** (future) | Energy monitor integration via `EmporiaAdapter` |
+| **Tesla Fleet API** | EV and Powerwall integration via `TeslaAdapter` (OAuth2 PKCE, VIN-based charging history) |
+| **Enphase Enlighten v4** | Solar microinverter data via `EnphaseAdapter` (OAuth2, daily-aggregate expansion) |
+| **SolarEdge Monitoring API** | Solar inverter data via `SolarEdgeAdapter` (API key, meter-type-aware endpoints) |
+| **Home Assistant REST** | Local smart home hub via `HomeAssistantAdapter` (Bearer token, SSRF-guarded) |
+| **Emporia Vue** | Energy monitor integration via `EmporiaAdapter` (Cognito user-pool auth, id_token cached) |
 | **Electricity Maps / WattTime** (implied) | Grid carbon intensity data stored in `zone_key` on profile; `generate-fake-grid-data.ts` simulates this feed |
 
-**Required environment variables**:
+**Environment variables**:
 ```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=        # for admin operations (account deletion)
-CONNECTION_CONFIG_SECRET=          # 64-char hex string for encrypting device credentials
+# Required — Supabase
+NEXT_PUBLIC_SUPABASE_URL=         # Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=    # Supabase anon key
+SUPABASE_SERVICE_ROLE_KEY=        # Service role key (account deletion)
+
+# Required — Credential encryption
+CONNECTION_CONFIG_SECRET=          # 64-char hex string (AES-256-GCM key)
+                                   # Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Required for location features
+ELECTRICITYMAPS_API_KEY=           # Grid carbon intensity data
+GOOGLE_MAPS_API_KEY=               # Geocoding for the location selector
+
+# Optional — OAuth fallback for live providers (can also be stored per-device)
+TESLA_CLIENT_ID=                   # Tesla Fleet API OAuth app client ID
+ENPHASE_CLIENT_ID=                 # Enphase Enlighten OAuth app client ID
+ENPHASE_CLIENT_SECRET=             # Enphase Enlighten OAuth app client secret
+
+# Optional — Home Assistant SSRF allowlist (comma-separated hosts)
+HOME_ASSISTANT_ALLOWED_HOSTS=      # Allows RFC1918 HA hosts in production
+
+# Optional — Deployment
+VERCEL_URL=                        # Set automatically by Vercel; used for metadataBase
 ```
 
 **Dev server**: runs on port 5000 (`next dev --turbopack --port 5000`).

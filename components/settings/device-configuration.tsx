@@ -66,23 +66,20 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
   const [deviceToDelete, setDeviceToDelete] = useState<DeviceWithConfig | null>(null);
 
   // Fetch devices from API
-  const fetchDevices = async () => {
-    try {
-      const response = await fetch('/api/configuration/devices');
-      if (response.ok) {
-        const data = await response.json();
-        setDevices(data.devices);
-      } else {
-        console.error('Failed to fetch devices');
-      }
-    } catch (error) {
-      console.error('Error fetching devices:', error);
-    }
+  const fetchDevices = () => {
+    let cancelled = false;
+    fetch('/api/configuration/devices')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch devices'))))
+      .then((data: { devices: DeviceWithConfig[] }) => {
+        if (!cancelled) setDevices(data.devices);
+      })
+      .catch((err: unknown) => console.error('Error fetching devices:', err));
+    return () => { cancelled = true; };
   };
 
   // Fetch devices on component mount
   useEffect(() => {
-    fetchDevices();
+    return fetchDevices();
   }, []);
 
   // Group devices by type

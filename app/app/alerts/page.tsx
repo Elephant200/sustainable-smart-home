@@ -24,42 +24,49 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   shield: Shield,
 };
 
+function renderTypeIcon(type: string) {
+  const cls = "h-4 w-4";
+  switch (type) {
+    case "success": return <CheckCircle className={cls} />;
+    case "warning":
+    case "error": return <AlertTriangle className={cls} />;
+    case "info": return <Info className={cls} />;
+    default: return <Bell className={cls} />;
+  }
+}
+
+function renderCategoryIcon(iconKey: string) {
+  const Icon = ICON_MAP[iconKey] ?? Bell;
+  return <Icon className="h-4 w-4" />;
+}
+
+function getTypeColor(type: string) {
+  switch (type) {
+    case "success": return "text-primary bg-primary/10 border-primary/30";
+    case "warning": return "text-warning bg-warning/10 border-warning/30";
+    case "error": return "text-destructive bg-destructive/10 border-destructive/30";
+    case "info": return "text-chart-2 bg-chart-2/10 border-chart-2/30";
+    default: return "text-muted-foreground bg-muted/40 border-border";
+  }
+}
+
+function getPriorityBadge(priority: string) {
+  switch (priority) {
+    case "high": return <Badge variant="destructive">High</Badge>;
+    case "medium": return <Badge variant="default" className="bg-warning/15 text-warning border-warning/30">Medium</Badge>;
+    case "low": return <Badge variant="outline">Low</Badge>;
+    default: return <Badge variant="outline">Normal</Badge>;
+  }
+}
+
 function NotificationCard({ notification }: { notification: Notification }) {
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "success": return "text-primary bg-primary/10 border-primary/30";
-      case "warning": return "text-warning bg-warning/10 border-warning/30";
-      case "error": return "text-destructive bg-destructive/10 border-destructive/30";
-      case "info": return "text-chart-2 bg-chart-2/10 border-chart-2/30";
-      default: return "text-muted-foreground bg-muted/40 border-border";
-    }
-  };
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "success": return CheckCircle;
-      case "warning":
-      case "error": return AlertTriangle;
-      case "info": return Info;
-      default: return Bell;
-    }
-  };
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case "high": return <Badge variant="destructive">High</Badge>;
-      case "medium": return <Badge variant="default" className="bg-warning/15 text-warning border-warning/30">Medium</Badge>;
-      case "low": return <Badge variant="outline">Low</Badge>;
-      default: return <Badge variant="outline">Normal</Badge>;
-    }
-  };
-  const TypeIcon = getTypeIcon(notification.type);
-  const CategoryIcon = ICON_MAP[notification.iconKey] ?? Bell;
   return (
     <Card className={`border-l-4 ${getTypeColor(notification.type)}`}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TypeIcon className="h-4 w-4" />
-            <CategoryIcon className="h-4 w-4" />
+            {renderTypeIcon(notification.type)}
+            {renderCategoryIcon(notification.iconKey)}
             <CardTitle className="text-base">{notification.title}</CardTitle>
           </div>
           <div className="flex items-center gap-2">

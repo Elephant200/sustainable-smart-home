@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters';
+import { computeSolarArrayInstant, deriveAlerts } from '@/lib/simulation';
 import {
-  solveFlows,
-  solveFlowsHistory,
-  computeSolarArrayInstant,
-  deriveAlerts,
-} from '@/lib/simulation';
+  solveFlowsHistoryFromAdapters,
+  solveCurrentFlowFromAdapters,
+} from '@/lib/server/adapter-flows';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,18 +19,29 @@ export async function GET() {
   const startToday = new Date(now);
   startToday.setHours(0, 0, 0, 0);
 
-  const battery = context.batteryConfigs[0] ?? null;
-  const todayFlows = solveFlowsHistory(
-    startToday,
-    now,
-    context.solarConfigs,
-    context.evConfigs,
-    battery
-  );
-  const current = solveFlows(now, context.solarConfigs, context.evConfigs, battery);
+  const flowsCtx = {
+    userId: context.user.id,
+    rawDevices: context.rawDevices,
+    solarConfigs: context.solarConfigs,
+    evConfigs: context.evConfigs,
+    batteryConfigs: context.batteryConfigs,
+    persistConfig: context.persistConnectionConfig,
+  };
+  const [todayFlows, current] = await Promise.all([
+    solveFlowsHistoryFromAdapters(startToday, now, flowsCtx),
+    solveCurrentFlowFromAdapters(flowsCtx),
+  ]);
 
-  const solarPanelInstant = context.solarConfigs[0]
-    ? computeSolarArrayInstant(context.solarConfigs[0], now)
+  // Per-panel telemetry is a simulator construct; only feed it to the
+  // alerts engine when the array was explicitly added as `simulated`.
+  // Real-provider arrays leave this `undefined` so the panel-condition
+  // alert is skipped rather than computed against fabricated data.
+  const simulatedSolarConfig = context.solarConfigs.find((cfg) => {
+    const dev = context.rawDevices.find((d) => d.id === cfg.id);
+    return dev?.provider_type === 'simulated';
+  });
+  const solarPanelInstant = simulatedSolarConfig
+    ? computeSolarArrayInstant(simulatedSolarConfig, now)
     : undefined;
 
   // Battery health for alerting: average across batteries that actually
@@ -47,6 +57,7 @@ export async function GET() {
           solar: context.solarConfigs,
           ev: context.evConfigs,
           battery: context.batteryConfigs.find((b) => b.id === d.id) ?? null,
+          persistConfig: context.persistConnectionConfig,
         }).getStatus()
       )
     );

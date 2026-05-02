@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { loadUserContext, findDeviceName } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters';
+import { pickHouseDevice } from '@/lib/server/system-devices';
 import {
   timeToFullHours,
-  computeHouseLoadInstant,
   RESERVE_FRACTION,
   ROUND_TRIP_EFFICIENCY_PCT,
   healthLabel,
@@ -69,6 +69,7 @@ export async function GET() {
         solar: context.solarConfigs,
         ev: context.evConfigs,
         battery: context.batteryConfigs.find((b) => b.id === device.id) ?? null,
+        persistConfig: context.persistConnectionConfig,
       });
       const [status, socSeries, powerSeries] = await Promise.all([
         adapter.getStatus(),
@@ -175,20 +176,29 @@ export async function GET() {
 
   // Critical-load estimate: average house load during the overnight backup
   // window (00:00–06:00). This is what the battery would have to support if
-  // the grid went down at night.
-  const overnightHouse: number[] = [];
-  for (let h = 0; h < 6; h++) {
-    const t = new Date(startToday);
-    t.setHours(h);
-    overnightHouse.push(computeHouseLoadInstant(t));
+  // the grid went down at night. We derive it from the user's configured
+  // house device's actual hourly history — never the simulator. With no
+  // house device configured we leave it `null` and let the UI surface a
+  // "configure a house meter to see backup runtime" hint.
+  const houseDevice = pickHouseDevice(context.rawDevices);
+  let criticalLoadKw: number | null = null;
+  if (houseDevice) {
+    const overnightEnd = new Date(startToday);
+    overnightEnd.setHours(6);
+    const houseSeries = await createAdapter(houseDevice, {
+      persistConfig: context.persistConnectionConfig,
+    }).getHistory({
+      metric: 'energy_kwh',
+      startDate: startToday,
+      endDate: overnightEnd,
+    });
+    if (houseSeries.length > 0) {
+      // Each sample carries kWh-in-the-interval; treat as average kW over
+      // the overnight window: total kWh / 6 hours.
+      const totalKwh = houseSeries.reduce((s, p) => s + p.value, 0);
+      criticalLoadKw = Math.round((totalKwh / 6) * 10) / 10;
+    }
   }
-  const criticalLoadKw =
-    overnightHouse.length > 0
-      ? Math.round(
-          (overnightHouse.reduce((s, v) => s + v, 0) / overnightHouse.length) *
-            10
-        ) / 10
-      : 1.0;
 
   const reserveKwh = RESERVE_FRACTION * totalCapacityKwh;
   const availableBackupKwh = Math.max(0, totalSocKwh - reserveKwh);
@@ -234,7 +244,10 @@ export async function GET() {
       reserve_kwh: Math.round(reserveKwh * 10) / 10,
       available_backup_kwh: Math.round(availableBackupKwh * 10) / 10,
       critical_load_kw: criticalLoadKw,
-      backup_mode_label: backupModeLabel(availableBackupKwh, criticalLoadKw),
+      backup_mode_label:
+        criticalLoadKw != null
+          ? backupModeLabel(availableBackupKwh, criticalLoadKw)
+          : null,
     },
     devices,
     history: combinedHistory.map((h) => ({

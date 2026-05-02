@@ -1,34 +1,32 @@
 /**
- * Synthetic device records for system-level adapters (house aggregate +
- * grid). The user's account doesn't store these as real devices, but the
- * adapter contract is per-device, so routes that need system-level data
- * (snapshot, history) materialize them on the fly and pass them through
- * `createAdapter` like any other device. This keeps simulation calls behind
- * the adapter layer.
+ * Helpers that resolve the user's house / grid device records.
+ *
+ * Per product rule, the simulator is only used when the user has
+ * **explicitly** added a device with `provider_type === 'simulated'`. There is
+ * therefore no synthetic fallback when the user hasn't configured a real
+ * house or grid device — the picker returns `null` and the calling route is
+ * responsible for surfacing an empty-state UI that points the user at
+ * Settings to add one.
  */
 
 import type { DeviceRecord } from '@/lib/adapters/types';
 
-export function makeHouseDevice(userId: string): DeviceRecord {
-  return {
-    id: `system-house-${userId}`,
-    user_id: userId,
-    name: 'House',
-    type: 'house',
-    is_active: true,
-    provider_type: 'simulated',
-    connection_config: {},
-  };
+/**
+ * Returns the user's configured house device when present, otherwise `null`.
+ * Routes that need a house reading should branch on `null` and skip the
+ * adapter call (and surface an "add a house meter in Settings" empty state).
+ */
+export function pickHouseDevice(devices: DeviceRecord[]): DeviceRecord | null {
+  return (
+    devices.find((d) => d.type === 'house' && d.is_active !== false) ?? null
+  );
 }
 
-export function makeGridDevice(userId: string): DeviceRecord {
-  return {
-    id: `system-grid-${userId}`,
-    user_id: userId,
-    name: 'Grid',
-    type: 'grid',
-    is_active: true,
-    provider_type: 'simulated',
-    connection_config: {},
-  };
+/**
+ * Returns the user's configured grid device when present, otherwise `null`.
+ */
+export function pickGridDevice(devices: DeviceRecord[]): DeviceRecord | null {
+  return (
+    devices.find((d) => d.type === 'grid' && d.is_active !== false) ?? null
+  );
 }

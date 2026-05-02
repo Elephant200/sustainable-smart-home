@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { loadUserContext, findDeviceName } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters/factory';
-import { makeHouseDevice, makeGridDevice } from '@/lib/server/system-devices';
+import { pickGridDevice, pickHouseDevice } from '@/lib/server/system-devices';
 import { estimateRangeMiles } from '@/lib/simulation';
+import { allocateFlowEdges } from '@/lib/simulation/flows';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,20 +17,32 @@ export async function GET() {
     solar: solarConfigs,
     ev: evConfigs,
     battery: batteryConfigs[0] ?? null,
+    persistConfig: context.persistConnectionConfig,
   };
 
   const solarDevices = rawDevices.filter((d) => d.type === 'solar_array');
   const batteryDevices = rawDevices.filter((d) => d.type === 'battery');
   const evDevices = rawDevices.filter((d) => d.type === 'ev');
+  const houseDevice = pickHouseDevice(rawDevices);
+  const gridDevice = pickGridDevice(rawDevices);
 
   // Per-device current state through the adapter layer (so a real provider
-  // swap is a one-file change in lib/adapters/providers/*).
-  const [solarStatuses, batteryStatuses, evStatuses, gridStatus] =
+  // swap is a one-file change in lib/adapters/providers/*). House and grid
+  // are skipped entirely when the user hasn't added one — the response
+  // exposes `null` for those roles so the dashboard can prompt the user to
+  // configure one in Settings instead of showing a fabricated value.
+  void user;
+  const [solarStatuses, batteryStatuses, evStatuses, gridStatus, houseStatus] =
     await Promise.all([
       Promise.all(solarDevices.map((d) => createAdapter(d, adapterCtx).getStatus())),
       Promise.all(batteryDevices.map((d) => createAdapter(d, adapterCtx).getStatus())),
       Promise.all(evDevices.map((d) => createAdapter(d, adapterCtx).getStatus())),
-      createAdapter(makeGridDevice(user.id), adapterCtx).getStatus(),
+      gridDevice
+        ? createAdapter(gridDevice, adapterCtx).getStatus()
+        : Promise.resolve(null),
+      houseDevice
+        ? createAdapter(houseDevice, adapterCtx).getStatus()
+        : Promise.resolve(null),
     ]);
 
   const solarOutputKw = solarStatuses.reduce(
@@ -37,7 +50,22 @@ export async function GET() {
     0
   );
 
-  const houseLoadKw = gridStatus.houseLoadKwSystem ?? 0;
+  // House load source preference (no simulator fallback — per product
+  // rule the simulator is only used when the user has *explicitly* added a
+  // simulated device, which surfaces here as a populated `houseLoadKw` on
+  // the SimulatedAdapter status; we therefore gate on the value being
+  // present rather than `isLive`, since SimulatedAdapter intentionally
+  // reports `isLive:false` for honesty even when its values are valid):
+  //   1. A house adapter that reported a value (real-live OR explicitly
+  //      simulated).
+  //   2. A real grid adapter that also reports LOAD (SolarEdge, Tesla).
+  //   3. 0 — UI shows an empty state pointing at Settings.
+  let houseLoadKw = 0;
+  if (houseStatus && houseStatus.houseLoadKw != null) {
+    houseLoadKw = houseStatus.houseLoadKw;
+  } else if (gridStatus?.houseLoadKwSystem != null) {
+    houseLoadKw = gridStatus.houseLoadKwSystem;
+  }
 
   const battery = batteryConfigs[0] ?? null;
   const batteryStatus = batteryStatuses[0];
@@ -62,9 +90,27 @@ export async function GET() {
   const evKw = evStates.reduce((s, e) => s + e.charge_rate_kw, 0);
   const batteryPowerKw = batteryStatus?.batteryPowerKw ?? 0;
   const batterySocPercent = batteryStatus?.batterySOCPercent ?? 0;
-  const gridKw = gridStatus.gridImportKw ?? 0;
 
   const now = new Date();
+
+  // Compute flow edges + signed grid_kw centrally from the per-class
+  // values we just gathered. We never trust adapter-supplied flowEdges
+  // (real providers don't populate them) and we never trust gridImportKw
+  // alone (it would not balance the rest of the snapshot under battery
+  // discharge or solar export). Running the same allocator that
+  // solveFlowsHistoryFromAdapters uses keeps every dashboard view
+  // consistent with itself.
+  const { grid_kw, edges } = allocateFlowEdges(
+    {
+      solar_kw: solarOutputKw,
+      house_kw: houseLoadKw,
+      ev_kw: evKw,
+      battery_power_kw: batteryPowerKw,
+      battery_soc_percent: batterySocPercent,
+    },
+    now
+  );
+
   return NextResponse.json({
     timestamp: now.toISOString(),
     flows: {
@@ -73,8 +119,8 @@ export async function GET() {
       ev_kw: Math.round(evKw * 100) / 100,
       battery_power_kw: Math.round(batteryPowerKw * 100) / 100,
       battery_soc_percent: Math.round(batterySocPercent * 10) / 10,
-      grid_kw: Math.round(gridKw * 100) / 100,
-      edges: (gridStatus.flowEdges ?? []).map((e) => ({
+      grid_kw: Math.round(grid_kw * 100) / 100,
+      edges: edges.map((e) => ({
         source: e.source,
         target: e.target,
         power_kw: Math.round(e.power_kw * 100) / 100,
@@ -94,7 +140,10 @@ export async function GET() {
           }
         : null,
       ev: evStates,
-      house: { current_kw: Math.round(houseLoadKw * 100) / 100 },
+      house: houseDevice || gridStatus?.houseLoadKwSystem != null
+        ? { current_kw: Math.round(houseLoadKw * 100) / 100 }
+        : null,
+      grid: gridDevice ? { current_kw: Math.round((gridStatus?.gridImportKw ?? 0) * 100) / 100 } : null,
     },
     counts: {
       solar: solarConfigs.length,

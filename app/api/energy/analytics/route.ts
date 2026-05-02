@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters';
 import {
-  solveFlows,
-  solveFlowsHistory,
   aggregateMonthly,
   computeCostSavings,
   summarizeAnalytics,
   computeSolarArrayInstant,
   deriveAlerts,
 } from '@/lib/simulation';
+import {
+  solveFlowsHistoryFromAdapters,
+  solveCurrentFlowFromAdapters,
+} from '@/lib/server/adapter-flows';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,32 +30,50 @@ export async function GET() {
   const last7Months = new Date(now.getFullYear(), now.getMonth() - 6, 1);
 
   const battery = context.batteryConfigs[0] ?? null;
+  const flowsCtx = {
+    userId: context.user.id,
+    rawDevices: context.rawDevices,
+    solarConfigs: context.solarConfigs,
+    evConfigs: context.evConfigs,
+    batteryConfigs: context.batteryConfigs,
+    persistConfig: context.persistConnectionConfig,
+  };
 
   // End the previous-month window 1ms before the current month starts so the
-  // inclusive history loop in solveFlowsHistory does not double-count the
-  // first hour of the current month.
+  // inclusive history loop does not double-count the first hour of the
+  // current month. All five histories are adapter-driven so configured live
+  // providers feed analytics directly; roles without a real device contribute
+  // 0 / empty to the aggregate (no implicit simulator fallback — see the
+  // explicit-only simulator policy documented in replit.md). The simulator
+  // only contributes when the user explicitly added a `provider_type:
+  // 'simulated'` device for that role.
   const prevMonthEnd = new Date(monthStart.getTime() - 1);
-  const [todayFlows, monthFlows, prevMonthFlows, yearFlows, trendFlows] = [
-    solveFlowsHistory(startToday, now, context.solarConfigs, context.evConfigs, battery),
-    solveFlowsHistory(monthStart, now, context.solarConfigs, context.evConfigs, battery),
-    solveFlowsHistory(prevMonthStart, prevMonthEnd, context.solarConfigs, context.evConfigs, battery),
-    solveFlowsHistory(yearStart, now, context.solarConfigs, context.evConfigs, battery),
-    solveFlowsHistory(last7Months, now, context.solarConfigs, context.evConfigs, battery),
-  ];
-
-  const currentFlow = solveFlows(now, context.solarConfigs, context.evConfigs, battery);
+  const [todayFlows, monthFlows, prevMonthFlows, yearFlows, trendFlows, currentFlow] =
+    await Promise.all([
+      solveFlowsHistoryFromAdapters(startToday, now, flowsCtx),
+      solveFlowsHistoryFromAdapters(monthStart, now, flowsCtx),
+      solveFlowsHistoryFromAdapters(prevMonthStart, prevMonthEnd, flowsCtx),
+      solveFlowsHistoryFromAdapters(yearStart, now, flowsCtx),
+      solveFlowsHistoryFromAdapters(last7Months, now, flowsCtx),
+      solveCurrentFlowFromAdapters(flowsCtx),
+    ]);
 
   // Evaluate panel health at solar noon and as a ratio to each array's own
-  // average. This isolates true panel-condition outliers from time-of-day or
-  // weather effects (which apply uniformly across all panels in one array)
-  // and avoids cross-array bias when arrays have different sizes/locations.
+  // average. The per-panel weather model is a simulator construct — real
+  // providers don't expose per-panel telemetry — so we only compute this
+  // for arrays the user has explicitly added as `simulated`. For real
+  // providers we leave it null and the analytics UI omits the metric.
   const solarNoon = new Date(now);
   solarNoon.setHours(12, 0, 0, 0);
+  const simulatedSolarConfigs = context.solarConfigs.filter((cfg) => {
+    const dev = context.rawDevices.find((d) => d.id === cfg.id);
+    return dev?.provider_type === 'simulated';
+  });
   let panelOptimalRatio: number | null = null;
-  if (context.solarConfigs.length > 0) {
+  if (simulatedSolarConfigs.length > 0) {
     let totalPanels = 0;
     let totalOptimal = 0;
-    for (const cfg of context.solarConfigs) {
+    for (const cfg of simulatedSolarConfigs) {
       const arr = computeSolarArrayInstant(cfg, solarNoon);
       if (arr.per_panel.length === 0) continue;
       const avgEff =
@@ -83,6 +103,7 @@ export async function GET() {
           solar: context.solarConfigs,
           ev: context.evConfigs,
           battery: context.batteryConfigs.find((b) => b.id === d.id) ?? null,
+          persistConfig: context.persistConnectionConfig,
         }).getStatus()
       )
     );
@@ -95,8 +116,12 @@ export async function GET() {
     }
   }
 
-  const solarPanelInstant = context.solarConfigs[0]
-    ? computeSolarArrayInstant(context.solarConfigs[0], now)
+  // Solar panel health input for alerts: only meaningful for simulated
+  // arrays (real providers don't expose per-panel telemetry). Pass
+  // `undefined` for real-provider arrays so deriveAlerts skips the
+  // panel-condition check rather than firing against fabricated data.
+  const solarPanelInstant = simulatedSolarConfigs[0]
+    ? computeSolarArrayInstant(simulatedSolarConfigs[0], now)
     : undefined;
   const alerts = deriveAlerts({
     now,

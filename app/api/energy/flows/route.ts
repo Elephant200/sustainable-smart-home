@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
-import { solveFlowsHistory } from '@/lib/simulation';
+import { solveFlowsHistoryFromAdapters } from '@/lib/server/adapter-flows';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,14 +30,16 @@ export async function GET(req: NextRequest) {
   const startDate = rangeToStartDate(range);
   const endDate = new Date();
 
-  const battery = context.batteryConfigs[0] ?? null;
-  const series = solveFlowsHistory(
-    startDate,
-    endDate,
-    context.solarConfigs,
-    context.evConfigs,
-    battery
-  );
+  // Adapter-driven flow series: live data from configured providers, with
+  // simulated fallback only for roles that have no real device.
+  const series = await solveFlowsHistoryFromAdapters(startDate, endDate, {
+    userId: context.user.id,
+    rawDevices: context.rawDevices,
+    solarConfigs: context.solarConfigs,
+    evConfigs: context.evConfigs,
+    batteryConfigs: context.batteryConfigs,
+    persistConfig: context.persistConnectionConfig,
+  });
 
   return NextResponse.json({
     range,

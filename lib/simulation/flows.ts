@@ -34,35 +34,33 @@ export interface SolvedFlows {
   edges: FlowEdge[];
 }
 
-export function solveFlows(
-  date: Date,
-  solarConfigs: SolarArrayConfig[],
-  evConfigs: EvDeviceConfig[],
-  batteryConfig: BatteryDeviceConfig | null
-): SolvedFlows {
-  const solar = computeTotalSolarInstant(solarConfigs, date);
-  const house = computeHouseLoadInstant(date);
-
-  let ev = 0;
-  let surplusForEv = Math.max(0, solar - house);
-  for (const cfg of evConfigs) {
-    const draw = computeEvChargeRateKw(cfg, date, surplusForEv);
-    ev += draw;
-    surplusForEv = Math.max(0, surplusForEv - draw);
-  }
-
-  let batterySoc = 50;
-  let batteryPower = 0;
-  if (batteryConfig) {
-    const state = computeBatteryStateAt(
-      batteryConfig,
-      date,
-      solarConfigs,
-      evConfigs
-    );
-    batterySoc = state.soc_percent;
-    batteryPower = state.power_kw;
-  }
+/**
+ * Pure flow-edge allocator. Given an instantaneous snapshot of kW values for
+ * solar / house / ev / battery (with SoC %), it returns the energy-flow
+ * graph and the resulting net grid_kw (positive = import, negative = export).
+ *
+ * Extracted so adapter-driven callers (which fetch the kW values from real
+ * provider APIs) can reuse the same allocation logic that the simulator
+ * uses for fully-simulated systems. Daytime/overnight EV-from-solar steering
+ * is preserved via the optional `date` argument; if omitted, EV is treated
+ * as eligible for solar at any hour.
+ */
+export function allocateFlowEdges(
+  snapshot: {
+    solar_kw: number;
+    house_kw: number;
+    ev_kw: number;
+    battery_power_kw: number;
+    battery_soc_percent: number;
+  },
+  date?: Date
+): { grid_kw: number; edges: FlowEdge[] } {
+  const { solar, house, ev, batteryPower } = {
+    solar: snapshot.solar_kw,
+    house: snapshot.house_kw,
+    ev: snapshot.ev_kw,
+    batteryPower: snapshot.battery_power_kw,
+  };
 
   const edges: FlowEdge[] = [];
   let solarRemaining = solar;
@@ -77,8 +75,8 @@ export function solveFlows(
   solarRemaining -= solarToHouse;
   houseRemaining -= solarToHouse;
 
-  // 2. Solar -> EV (only daytime)
-  if (!isOvernightWindow(date)) {
+  // 2. Solar -> EV (only daytime when a date is supplied)
+  if (!date || !isOvernightWindow(date)) {
     const solarToEv = Math.min(solarRemaining, evRemaining);
     if (solarToEv > 0.05) {
       edges.push({ source: 'solar', target: 'ev', power_kw: solarToEv });
@@ -142,7 +140,49 @@ export function solveFlows(
   const gridExport = edges
     .filter((e) => e.target === 'grid')
     .reduce((s, e) => s + e.power_kw, 0);
-  const grid_kw = gridImport - gridExport;
+  return { grid_kw: gridImport - gridExport, edges };
+}
+
+export function solveFlows(
+  date: Date,
+  solarConfigs: SolarArrayConfig[],
+  evConfigs: EvDeviceConfig[],
+  batteryConfig: BatteryDeviceConfig | null
+): SolvedFlows {
+  const solar = computeTotalSolarInstant(solarConfigs, date);
+  const house = computeHouseLoadInstant(date);
+
+  let ev = 0;
+  let surplusForEv = Math.max(0, solar - house);
+  for (const cfg of evConfigs) {
+    const draw = computeEvChargeRateKw(cfg, date, surplusForEv);
+    ev += draw;
+    surplusForEv = Math.max(0, surplusForEv - draw);
+  }
+
+  let batterySoc = 50;
+  let batteryPower = 0;
+  if (batteryConfig) {
+    const state = computeBatteryStateAt(
+      batteryConfig,
+      date,
+      solarConfigs,
+      evConfigs
+    );
+    batterySoc = state.soc_percent;
+    batteryPower = state.power_kw;
+  }
+
+  const { grid_kw, edges } = allocateFlowEdges(
+    {
+      solar_kw: solar,
+      house_kw: house,
+      ev_kw: ev,
+      battery_power_kw: batteryPower,
+      battery_soc_percent: batterySoc,
+    },
+    date
+  );
 
   return {
     timestamp: date,

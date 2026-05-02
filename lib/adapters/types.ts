@@ -74,7 +74,14 @@ export interface DeviceStatus {
    * from the same flow solve. Lets the snapshot route avoid a second house
    * adapter call when it already has the grid status. Optional. */
   houseLoadKwSystem?: number;
+  /** True when the values came from a successful live provider call. False
+   * when the provider failed or this device has no configured provider; in
+   * that case data fields will be absent (not simulated). */
   isLive: boolean;
+  /** Human-readable explanation when isLive is false. Routes/UI should
+   * surface this to the user (e.g. "Live data unavailable: HTTP 401").
+   * The simulator never sets this. */
+  error?: string;
 }
 
 export interface HistoricalPoint {
@@ -146,6 +153,16 @@ export function hasStoredCredentials(
     return true;
   return requiredFields.every((f) => typeof cfg[f] === 'string' && !!cfg[f]);
 }
+
+/**
+ * Callback invoked by an adapter when it rotates credentials (e.g. an OAuth
+ * refresh) and the new plaintext payload should be encrypted and persisted
+ * to the device's `connection_config` column. Server routes wire this
+ * through `loadUserContext()`; client-only callers may omit it.
+ */
+export type CredentialPersister = (
+  plaintext: Record<string, unknown>
+) => Promise<void>;
 
 export interface DeviceAdapter {
   readonly providerType: ProviderType;

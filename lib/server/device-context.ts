@@ -11,6 +11,10 @@ import type { SolarArrayConfig } from '@/lib/simulation/solar';
 import type { BatteryDeviceConfig } from '@/lib/simulation/battery';
 import type { EvDeviceConfig } from '@/lib/simulation/ev';
 import type { DeviceRecord } from '@/lib/adapters/types';
+import {
+  decryptConnectionConfig,
+  encryptConnectionConfig,
+} from '@/lib/crypto/connection-config';
 
 export interface UserDeviceContext {
   user: User;
@@ -21,6 +25,18 @@ export interface UserDeviceContext {
   evConfigs: EvDeviceConfig[];
   hasHouse: boolean;
   hasGrid: boolean;
+  /**
+   * Encrypts the given plaintext connection_config and writes it back to
+   * `devices.connection_config`. Used by OAuth-based adapters (Tesla,
+   * Enphase) and Cognito-based adapters (Emporia) to persist rotated
+   * tokens so the next request doesn't re-authenticate from scratch.
+   *
+   * Routes pass this as `persistConfig` on the adapter context.
+   */
+  persistConnectionConfig: (
+    deviceId: string,
+    plaintext: Record<string, unknown>
+  ) => Promise<void>;
 }
 
 /**
@@ -133,8 +149,18 @@ export async function loadUserContext(): Promise<
     })
   );
 
-  // Attach the joined config to each device record for adapter use
+  // Attach the joined config to each device record for adapter use.
+  // The DB stores `connection_config` as the encrypted blob
+  // `{ __encrypted: "iv:tag:ciphertext" }`. Adapters need the plaintext
+  // credentials to call provider APIs, so decrypt at this boundary.
+  // Decryption happens server-side only; the plaintext never leaves this
+  // module's call graph (routes only return shaped status / history).
   const rawDevices: DeviceRecord[] = deviceList.map((d) => {
+    const stored = (d.connection_config ?? {}) as Record<string, unknown>;
+    const decrypted =
+      typeof stored.__encrypted === 'string' && stored.__encrypted.length > 0
+        ? decryptConnectionConfig(stored)
+        : stored;
     const dev: DeviceRecord = {
       id: d.id,
       user_id: d.user_id,
@@ -142,7 +168,7 @@ export async function loadUserContext(): Promise<
       type: d.type,
       is_active: d.is_active,
       provider_type: d.provider_type ?? 'simulated',
-      connection_config: d.connection_config ?? {},
+      connection_config: decrypted,
     };
     if (d.type === 'solar_array') {
       const cfg = solarConfigs.find((c) => c.id === d.id);
@@ -171,6 +197,24 @@ export async function loadUserContext(): Promise<
     return dev;
   });
 
+  const persistConnectionConfig = async (
+    deviceId: string,
+    plaintext: Record<string, unknown>
+  ): Promise<void> => {
+    const encrypted = encryptConnectionConfig(plaintext);
+    const { error } = await supabase
+      .from('devices')
+      .update({ connection_config: encrypted })
+      .eq('id', deviceId)
+      .eq('user_id', user.id);
+    if (error) {
+      console.error(
+        `[device-context] Failed to persist rotated credentials for device ${deviceId}:`,
+        error
+      );
+    }
+  };
+
   return {
     context: {
       user,
@@ -181,6 +225,7 @@ export async function loadUserContext(): Promise<
       evConfigs,
       hasHouse: deviceList.some((d) => d.type === 'house'),
       hasGrid: deviceList.some((d) => d.type === 'grid'),
+      persistConnectionConfig,
     },
   };
 }

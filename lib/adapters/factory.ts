@@ -1,4 +1,9 @@
-import { DeviceAdapter, DeviceRecord, ProviderType } from './types';
+import {
+  CredentialPersister,
+  DeviceAdapter,
+  DeviceRecord,
+  ProviderType,
+} from './types';
 import { SimulatedAdapter } from './simulated';
 import { TeslaAdapter } from './providers/tesla';
 import { EnphaseAdapter } from './providers/enphase';
@@ -12,13 +17,31 @@ import type { EvDeviceConfig } from '@/lib/simulation/ev';
 /**
  * Cross-device context passed to the SimulatedAdapter so battery/EV/grid
  * status reflects the full system (e.g., available solar surplus). Real
- * provider adapters ignore it because the upstream API already has full
- * site context.
+ * provider adapters ignore the simulation context because the upstream API
+ * already has full site context.
+ *
+ * `persistConfig` is the only field consumed by real adapters: OAuth
+ * providers (Tesla, Enphase) and Cognito (Emporia) call it to write
+ * rotated tokens back to the DB. Server routes wire it via
+ * `loadUserContext().persistConnectionConfig`.
  */
 export interface AdapterContext {
   solar?: SolarArrayConfig[];
   ev?: EvDeviceConfig[];
   battery?: BatteryDeviceConfig | null;
+  persistConfig?: (
+    deviceId: string,
+    plaintext: Record<string, unknown>
+  ) => Promise<void>;
+}
+
+function bindPersister(
+  device: DeviceRecord,
+  context?: AdapterContext
+): CredentialPersister | undefined {
+  if (!context?.persistConfig) return undefined;
+  const persist = context.persistConfig;
+  return (plaintext) => persist(device.id, plaintext);
 }
 
 export function createAdapter(
@@ -26,18 +49,19 @@ export function createAdapter(
   context?: AdapterContext
 ): DeviceAdapter {
   const providerType: ProviderType = device.provider_type ?? 'simulated';
+  const persister = bindPersister(device, context);
 
   switch (providerType) {
     case 'tesla':
-      return new TeslaAdapter(device);
+      return new TeslaAdapter(device, persister);
     case 'enphase':
-      return new EnphaseAdapter(device);
+      return new EnphaseAdapter(device, persister);
     case 'home_assistant':
       return new HomeAssistantAdapter(device);
     case 'solaredge':
       return new SolarEdgeAdapter(device);
     case 'emporia':
-      return new EmporiaAdapter(device);
+      return new EmporiaAdapter(device, persister);
     case 'simulated':
     default:
       return new SimulatedAdapter(device, context);

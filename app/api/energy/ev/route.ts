@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { loadUserContext, findDeviceName } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters/factory';
-import { makeGridDevice } from '@/lib/server/system-devices';
+import { pickGridDevice } from '@/lib/server/system-devices';
+import { bucketAvgRate, isoHour } from '@/lib/server/adapter-flows';
 import {
   estimateRangeMiles,
   timeToFull,
@@ -37,6 +38,7 @@ export async function GET() {
     solar: context.solarConfigs,
     ev: context.evConfigs,
     battery: context.batteryConfigs[0] ?? null,
+    persistConfig: context.persistConnectionConfig,
   };
 
   const evDevices = context.rawDevices.filter((d) => d.type === 'ev');
@@ -47,6 +49,14 @@ export async function GET() {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const start24h = new Date(now.getTime() - 23 * 60 * 60 * 1000);
   start24h.setMinutes(0, 0, 0);
+
+  // Grid history is only available when the user has actually configured
+  // a grid device (real or user-added simulated). With none configured we
+  // skip the request and treat every hour as 0 grid_kw — the clean-energy
+  // percentage degrades gracefully instead of being inflated by a
+  // fabricated "all imports free" baseline.
+  const gridDevice = pickGridDevice(context.rawDevices);
+  const gridHistoryEmpty = Promise.resolve([] as { timestamp: Date; value: number; unit: string }[]);
 
   const [evStatuses, evWeekHistories, ev24hHistories, evMonthHistories, gridDayHistory, gridMonthHistory] =
     await Promise.all([
@@ -78,20 +88,25 @@ export async function GET() {
           })
         )
       ),
-      // Grid kW history — used to compute "clean energy %" alongside solar
-      createAdapter(makeGridDevice(context.user.id), adapterCtx).getHistory({
-        metric: 'grid_kw',
-        startDate: startToday,
-        endDate: now,
-      }),
-      createAdapter(makeGridDevice(context.user.id), adapterCtx).getHistory({
-        metric: 'grid_kw',
-        startDate: monthStart,
-        endDate: now,
-      }),
+      gridDevice
+        ? createAdapter(gridDevice, adapterCtx).getHistory({
+            metric: 'grid_kw',
+            startDate: startToday,
+            endDate: now,
+          })
+        : gridHistoryEmpty,
+      gridDevice
+        ? createAdapter(gridDevice, adapterCtx).getHistory({
+            metric: 'grid_kw',
+            startDate: monthStart,
+            endDate: now,
+          })
+        : gridHistoryEmpty,
     ]);
 
-  // Solar history (for clean-energy %) — sum across solar adapters
+  // Solar history (for clean-energy %) — fetched per solar device. We
+  // bucket the per-device series into ISO-hour kWh below; doing it here
+  // would lock us into one keying scheme prematurely.
   const solarDevices = context.rawDevices.filter((d) => d.type === 'solar_array');
   const solarTodayHistories = await Promise.all(
     solarDevices.map((d) =>
@@ -102,38 +117,50 @@ export async function GET() {
       })
     )
   );
-  const solarHourly = new Map<string, number>();
+
+  // Today's total EV kWh. We MUST integrate `charge_kw` over time — a raw
+  // sum of sub-hourly power samples would over-count by the sample count
+  // per hour (e.g. 5-minute Home Assistant samples would inflate 1h of
+  // 7 kW charging from 7 kWh to ~84 kWh). The fix: per-vehicle bucket-
+  // average the kW samples to one value per ISO hour, then sum across
+  // vehicles per hour. Since each hour-bucket is 1h wide, the per-hour
+  // kW value is also kWh-per-hour, and summing across hours yields kWh.
+  const evHourlyKwhToday = new Map<string, number>();
+  const perVehicleBucketsMonth = evMonthHistories.map(bucketAvgRate);
+  for (const vehicleBuckets of perVehicleBucketsMonth) {
+    for (const [hourKey, avgKw] of vehicleBuckets) {
+      if (new Date(hourKey) < startToday) continue;
+      // avgKw (kW) × 1h = kWh delivered in that hour by this vehicle.
+      evHourlyKwhToday.set(hourKey, (evHourlyKwhToday.get(hourKey) ?? 0) + avgKw);
+    }
+  }
+  const totalEvKwhToday = Array.from(evHourlyKwhToday.values()).reduce(
+    (s, v) => s + v,
+    0
+  );
+
+  // Clean energy share per hour: solar / (solar + grid_import). All
+  // three series (EV kWh per hour above, solar kWh per hour, grid kW
+  // per hour) are keyed by isoHour() so the lookups align even when
+  // adapters emit sub-hourly samples.
+  const solarHourlyKwh = new Map<string, number>();
   for (const series of solarTodayHistories) {
+    // `energy_kwh` is additive per interval, so summing across samples
+    // within an hour gives the kWh delivered that hour.
     for (const pt of series) {
-      const key = pt.timestamp.toISOString();
-      solarHourly.set(key, (solarHourly.get(key) ?? 0) + pt.value);
+      const key = isoHour(pt.timestamp);
+      solarHourlyKwh.set(key, (solarHourlyKwh.get(key) ?? 0) + pt.value);
     }
   }
-
-  // Today's total EV kWh (sum hourly per-vehicle charge_kw across vehicles)
-  // Bucket by ISO hour to avoid double-counting if adapters disagree on cadence.
-  const evHourlyToday = new Map<string, number>();
-  for (let vi = 0; vi < evDevices.length; vi++) {
-    const series = evMonthHistories[vi]; // contains today within month
-    for (const pt of series) {
-      if (pt.timestamp < startToday) continue;
-      const key = pt.timestamp.toISOString();
-      evHourlyToday.set(key, (evHourlyToday.get(key) ?? 0) + pt.value);
-    }
-  }
-  const totalEvKwhToday = Array.from(evHourlyToday.values()).reduce((s, v) => s + v, 0);
-
-  // Clean energy share per hour: solar / (solar + grid_import)
-  const gridHourly = new Map<string, number>();
-  for (const pt of gridDayHistory) {
-    gridHourly.set(pt.timestamp.toISOString(), pt.value);
-  }
+  // grid_kw is instantaneous; bucket-avg per hour gives kW which == kWh
+  // per hour over a 1h bucket. Use the same helper as EV power.
+  const gridHourlyKw = bucketAvgRate(gridDayHistory);
   let cleanEnergyKwh = 0;
-  for (const [key, evKw] of evHourlyToday) {
-    const solar = solarHourly.get(key) ?? 0;
-    const gridImport = Math.max(0, gridHourly.get(key) ?? 0);
+  for (const [hourKey, evKwh] of evHourlyKwhToday) {
+    const solar = solarHourlyKwh.get(hourKey) ?? 0;
+    const gridImport = Math.max(0, gridHourlyKw.get(hourKey) ?? 0);
     const cleanShare = solar > 0 ? Math.min(1, solar / Math.max(0.001, solar + gridImport)) : 0;
-    cleanEnergyKwh += evKw * cleanShare;
+    cleanEnergyKwh += evKwh * cleanShare;
   }
   const cleanEnergyPct =
     totalEvKwhToday > 0 ? Math.round((cleanEnergyKwh / totalEvKwhToday) * 100) : 0;
@@ -187,17 +214,20 @@ export async function GET() {
     };
   });
 
-  // 24h chart: per-hour totals + per-vehicle breakdown from adapter histories
+  // 24h chart: per-hour AVG kW per vehicle, then summed across vehicles
+  // per hour. We bucket-average inside each vehicle's series to one value
+  // per ISO hour first — raw-summing sub-hourly samples would inflate the
+  // chart by the sample count (e.g. 12× for 5-min cadence).
   const history24h: { time: string; total_kw: number; per_vehicle: Record<string, number> }[] = [];
   const buckets = new Map<string, { total: number; perVehicle: Record<string, number> }>();
+  const perVehicle24hBuckets = ev24hHistories.map(bucketAvgRate);
   for (let vi = 0; vi < evDevices.length; vi++) {
     const name = findDeviceName(context.rawDevices, evDevices[vi].id);
-    for (const pt of ev24hHistories[vi]) {
-      const key = pt.timestamp.toISOString();
-      const entry = buckets.get(key) ?? { total: 0, perVehicle: {} };
-      entry.total += pt.value;
-      entry.perVehicle[name] = (entry.perVehicle[name] ?? 0) + pt.value;
-      buckets.set(key, entry);
+    for (const [hourKey, avgKw] of perVehicle24hBuckets[vi]) {
+      const entry = buckets.get(hourKey) ?? { total: 0, perVehicle: {} };
+      entry.total += avgKw;
+      entry.perVehicle[name] = (entry.perVehicle[name] ?? 0) + avgKw;
+      buckets.set(hourKey, entry);
     }
   }
   const sortedKeys = Array.from(buckets.keys()).sort();
@@ -215,18 +245,20 @@ export async function GET() {
   const totalCurrentKw = vehicles.reduce((s, v) => s + v.charge_rate_kw, 0);
   const chargingCount = vehicles.filter((v) => v.charging_status === 'charging').length;
 
-  // Month EV kWh — sum hourly per-vehicle, deduped across cadence
-  const evHourlyMonth = new Map<string, number>();
-  for (let vi = 0; vi < evDevices.length; vi++) {
-    for (const pt of evMonthHistories[vi]) {
-      const key = pt.timestamp.toISOString();
-      evHourlyMonth.set(key, (evHourlyMonth.get(key) ?? 0) + pt.value);
+  // Month EV kWh — same per-vehicle bucket-average pattern as today.
+  // The monthly buckets were pre-computed above as `perVehicleBucketsMonth`.
+  // Each per-hour avg kW × 1h = kWh per hour; sum across vehicles, then
+  // sum across all hours in the month.
+  const evHourlyKwhMonth = new Map<string, number>();
+  for (const vehicleBuckets of perVehicleBucketsMonth) {
+    for (const [hourKey, avgKw] of vehicleBuckets) {
+      evHourlyKwhMonth.set(hourKey, (evHourlyKwhMonth.get(hourKey) ?? 0) + avgKw);
     }
   }
   // Suppress unused-import lint for gridMonthHistory: it's reserved for
   // future cost-savings calculations that include grid carbon weighting.
   void gridMonthHistory;
-  const monthEvKwh = Array.from(evHourlyMonth.values()).reduce((s, v) => s + v, 0);
+  const monthEvKwh = Array.from(evHourlyKwhMonth.values()).reduce((s, v) => s + v, 0);
   const monthEvCostSavings = monthEvKwh * 0.18 * 0.18;
 
   return NextResponse.json({

@@ -33,7 +33,10 @@ export async function GET(req: NextRequest) {
   // aligned hourly buckets.
   const perDeviceSeries = await Promise.all(
     solarDevices.map((d) =>
-      createAdapter(d, { solar: context.solarConfigs }).getHistory({
+      createAdapter(d, {
+        solar: context.solarConfigs,
+        persistConfig: context.persistConnectionConfig,
+      }).getHistory({
         metric: 'energy_kwh',
         startDate: start,
         endDate: now,

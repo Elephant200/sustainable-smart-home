@@ -200,6 +200,10 @@ export class SimulatedAdapter implements DeviceAdapter {
         );
         status.gridImportKw = flows.grid_kw;
         status.gridCarbonIntensity = 250;
+        // System-level edges + house load derived from the same flow solve
+        // so callers don't need to invoke the physics library directly.
+        status.flowEdges = flows.edges;
+        status.houseLoadKwSystem = flows.house_kw;
         break;
       }
     }

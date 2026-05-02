@@ -66,6 +66,14 @@ export interface DeviceStatus {
   houseLoadKw?: number;
   gridImportKw?: number;
   gridCarbonIntensity?: number;
+  /** System-level energy flow edges. Populated by the grid adapter so the
+   * snapshot route can render the energy-flow diagram without calling the
+   * physics solver directly. */
+  flowEdges?: { source: string; target: string; power_kw: number }[];
+  /** System-level house load (kW) reported alongside grid status, derived
+   * from the same flow solve. Lets the snapshot route avoid a second house
+   * adapter call when it already has the grid status. Optional. */
+  houseLoadKwSystem?: number;
   isLive: boolean;
 }
 

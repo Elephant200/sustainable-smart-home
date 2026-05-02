@@ -35,7 +35,7 @@ function getKey(): Buffer {
   return Buffer.from(hexKey, 'hex');
 }
 
-export interface EncryptedPayload {
+export interface EncryptedPayload extends Record<string, unknown> {
   __encrypted: string;
 }
 

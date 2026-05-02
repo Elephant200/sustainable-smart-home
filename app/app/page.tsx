@@ -9,7 +9,7 @@ import { Zap, Activity, Settings2, Sun, Battery, Car, DollarSign } from "lucide-
 import { CarbonIntensityChart } from "@/components/visualizations/carbon-intensity-chart";
 import { HouseLoadChart } from "@/components/visualizations/house-load-chart";
 import { EnergyFlowDiagram } from "@/components/visualizations/energy-flow-diagram-lazy";
-import { SkeletonChartCard } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonChartCard } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { useSnapshot, useAnalytics, useAlerts } from "@/lib/hooks/use-energy-data";
 
@@ -22,8 +22,12 @@ function MetricValue({
   value: string;
   className?: string;
 }) {
-  if (loading) return <div className="text-2xl font-bold animate-pulse">…</div>;
+  if (loading) return <Skeleton className="h-8 w-24" />;
   return <div className={`text-2xl font-bold ${className ?? ""}`}>{value}</div>;
+}
+
+function InlineSkeleton({ width = "w-16" }: { width?: string }) {
+  return <Skeleton className={`inline-block h-4 ${width} align-middle`} />;
 }
 
 export default function DashboardPage() {
@@ -74,7 +78,7 @@ export default function DashboardPage() {
             />
             <div className="text-sm text-muted-foreground">Generating now</div>
             <div className="text-xs text-primary mt-1">
-              {analyticsLoading ? "…" : `${solarToday.toFixed(1)} kWh today`}
+              {analyticsLoading ? <InlineSkeleton width="w-24" /> : `${solarToday.toFixed(1)} kWh today`}
             </div>
           </CardContent>
         </Card>
@@ -138,9 +142,11 @@ export default function DashboardPage() {
             />
             <div className="text-sm text-muted-foreground">Today</div>
             <div className="text-xs text-primary mt-1">
-              {analyticsLoading
-                ? "…"
-                : `$${monthlySavings.toLocaleString()} this month`}
+              {analyticsLoading ? (
+                <InlineSkeleton width="w-32" />
+              ) : (
+                `$${monthlySavings.toLocaleString()} this month`
+              )}
             </div>
           </CardContent>
         </Card>
@@ -172,7 +178,7 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center">
               <span className="text-sm">House Load</span>
               <span className="font-semibold">
-                {snapLoading ? "…" : `${housePower.toFixed(2)} kW`}
+                {snapLoading ? <InlineSkeleton /> : `${housePower.toFixed(2)} kW`}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -180,13 +186,13 @@ export default function DashboardPage() {
                 {gridPower < 0 ? "Grid Export" : "Grid Import"}
               </span>
               <span className="font-semibold text-primary">
-                {snapLoading ? "…" : `${Math.abs(gridPower).toFixed(2)} kW`}
+                {snapLoading ? <InlineSkeleton /> : `${Math.abs(gridPower).toFixed(2)} kW`}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Self-Sufficiency</span>
               <span className="font-semibold">
-                {analyticsLoading ? "…" : `${independence}%`}
+                {analyticsLoading ? <InlineSkeleton width="w-12" /> : `${independence}%`}
               </span>
             </div>
           </CardContent>
@@ -201,7 +207,7 @@ export default function DashboardPage() {
             <CardDescription>Current system health</CardDescription>
             <CardAction>
               <Badge variant="default" className="bg-primary/15 text-primary">
-                {analyticsLoading ? "…" : systemStatusLabel}
+                {analyticsLoading ? <InlineSkeleton width="w-16" /> : systemStatusLabel}
               </Badge>
             </CardAction>
           </CardHeader>
@@ -209,19 +215,19 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center">
               <span className="text-sm">System Health</span>
               <span className="font-semibold text-primary">
-                {analyticsLoading ? "…" : `${systemHealth}%`}
+                {analyticsLoading ? <InlineSkeleton width="w-12" /> : `${systemHealth}%`}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Active Alerts</span>
               <Badge variant="outline" className="bg-chart-2/10 text-chart-2">
-                {alertsLoading ? "…" : activeAlerts}
+                {alertsLoading ? <InlineSkeleton width="w-6" /> : activeAlerts}
               </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">CO₂ Reduced</span>
               <span className="font-semibold text-primary">
-                {analyticsLoading ? "…" : `${carbonReduced} tons/mo`}
+                {analyticsLoading ? <InlineSkeleton width="w-20" /> : `${carbonReduced} tons/mo`}
               </span>
             </div>
           </CardContent>

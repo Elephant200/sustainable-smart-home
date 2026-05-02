@@ -3,6 +3,7 @@
  */
 
 import { SolvedFlows } from './flows';
+import { ROUND_TRIP_EFFICIENCY_PCT, STORAGE_EFFICIENCY_PCT } from './constants';
 
 export interface MonthlyTotals {
   month: string;
@@ -128,6 +129,18 @@ export interface AnalyticsSummary {
   ytd_savings_usd: number;
   ytd_carbon_tons: number;
   uptime_pct: number;
+  prev_month_savings_usd: number;
+  month_over_month_savings_pct: number;
+  battery_round_trip_efficiency_pct: number;
+  storage_efficiency_pct: number;
+  battery_health_pct: number;
+  system_health_pct: number;
+}
+
+export interface SystemHealthInputs {
+  batteryHealthPct?: number | null;
+  panelOptimalRatio?: number | null;
+  activeWarningRatio?: number | null;
 }
 
 export function summarizeAnalytics(
@@ -135,7 +148,9 @@ export function summarizeAnalytics(
   monthFlows: SolvedFlows[],
   yearFlows: SolvedFlows[],
   currentFlow: SolvedFlows,
-  batteryCapacityKwh: number = 0
+  batteryCapacityKwh: number = 0,
+  prevMonthFlows: SolvedFlows[] = [],
+  systemHealth: SystemHealthInputs = {}
 ): AnalyticsSummary {
   const solarToday = todayFlows.reduce((s, f) => s + f.solar_kw, 0);
   const todayCost = computeCostSavings(todayFlows).reduce(
@@ -187,6 +202,37 @@ export function summarizeAnalytics(
   const monthEv = monthFlows.reduce((s, f) => s + f.ev_kw, 0);
   const monthHouse = monthFlows.reduce((s, f) => s + f.house_kw, 0);
 
+  const prevMonthCost = prevMonthFlows.length
+    ? computeCostSavings(prevMonthFlows).reduce((s, c) => s + c.amount_usd, 0)
+    : 0;
+  const monthOverMonthPct = prevMonthCost > 0
+    ? Math.round(((monthCost - prevMonthCost) / prevMonthCost) * 1000) / 10
+    : 0;
+
+  const warningRatio = systemHealth.activeWarningRatio ?? 0;
+  const uptime = Math.round(Math.max(80, 100 - warningRatio * 20));
+
+  // Composite system health weights only the components the user actually has
+  // installed so a no-solar or no-battery site doesn't get an artificially
+  // inflated 100% from defaulted-in components. Weights are renormalized.
+  const haveBattery = systemHealth.batteryHealthPct != null;
+  const havePanels = systemHealth.panelOptimalRatio != null;
+  const W_BATT = 0.5;
+  const W_PANEL = 0.3;
+  const W_UPTIME = 0.2;
+  let weightedSum = uptime * W_UPTIME;
+  let totalWeight = W_UPTIME;
+  if (haveBattery) {
+    weightedSum += (systemHealth.batteryHealthPct as number) * W_BATT;
+    totalWeight += W_BATT;
+  }
+  if (havePanels) {
+    weightedSum += (systemHealth.panelOptimalRatio as number) * 100 * W_PANEL;
+    totalWeight += W_PANEL;
+  }
+  const systemHealthPct = Math.round(weightedSum / totalWeight);
+  const batteryHealth = systemHealth.batteryHealthPct ?? 0;
+
   return {
     solar_today_kwh: Math.round(solarToday * 10) / 10,
     solar_current_kw: Math.round(currentFlow.solar_kw * 100) / 100,
@@ -205,6 +251,12 @@ export function summarizeAnalytics(
     ytd_solar_mwh: Math.round((yearSolar / 1000) * 10) / 10,
     ytd_savings_usd: Math.round(yearCost),
     ytd_carbon_tons: Math.round(yearCarbon * 10) / 10,
-    uptime_pct: 99,
+    uptime_pct: uptime,
+    prev_month_savings_usd: Math.round(prevMonthCost),
+    month_over_month_savings_pct: monthOverMonthPct,
+    battery_round_trip_efficiency_pct: ROUND_TRIP_EFFICIENCY_PCT,
+    storage_efficiency_pct: STORAGE_EFFICIENCY_PCT,
+    battery_health_pct: Math.round(batteryHealth),
+    system_health_pct: systemHealthPct,
   };
 }

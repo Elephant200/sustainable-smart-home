@@ -9,6 +9,10 @@ import {
   timeToFull,
   isOvernightWindow,
   solveFlowsHistory,
+  offPeakWindowLabel,
+  offPeakStartLabel,
+  fmtClock12h,
+  PRIORITY_MODE_LABEL,
 } from '@/lib/simulation';
 
 export const dynamic = 'force-dynamic';
@@ -63,6 +67,7 @@ export async function GET() {
     const lastChargedSoc = computeEvSocPercent(cfg, new Date(now.getTime() - 60 * 60 * 1000));
     const lastChargedTime = rate > 0 ? 'Now' : fmtTime(new Date(startToday.getTime() + 6 * 3600000 + 23 * 60000));
 
+    const departureShort = fmtClock12h(String(cfg.departure_time).slice(0, 5));
     return {
       id: cfg.id,
       name: findDeviceName(context.rawDevices, cfg.id),
@@ -78,6 +83,7 @@ export async function GET() {
       last_charged_label: lastChargedTime,
       efficiency: '4.0 mi/kWh',
       departure_time: cfg.departure_time,
+      schedule_window_label: `${offPeakStartLabel()} – ${departureShort}`,
       _diff: Math.round(soc - lastChargedSoc),
     };
   });
@@ -132,6 +138,9 @@ export async function GET() {
       cost_savings_usd: Math.round(monthEvCostSavings * 100) / 100,
       clean_energy_pct: cleanEnergyPct,
       month_energy_mwh: Math.round((monthEvKwh / 1000) * 100) / 100,
+      off_peak_window_label: offPeakWindowLabel(),
+      off_peak_start_label: offPeakStartLabel(),
+      priority_mode_label: PRIORITY_MODE_LABEL,
     },
   });
 }

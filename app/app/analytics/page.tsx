@@ -78,7 +78,15 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">${s.monthly_savings_usd.toLocaleString()}</div>
-            <div className="text-sm text-primary">+18% vs last month</div>
+            <div
+              className={`text-sm ${
+                s.month_over_month_savings_pct >= 0 ? "text-primary" : "text-destructive"
+              }`}
+            >
+              {s.prev_month_savings_usd > 0
+                ? `${s.month_over_month_savings_pct >= 0 ? "+" : ""}${s.month_over_month_savings_pct}% vs last month`
+                : "No prior month data"}
+            </div>
             <div className="mt-2 text-sm text-muted-foreground">
               ${s.annual_savings_usd.toLocaleString()} annual
             </div>
@@ -167,7 +175,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Round-trip Efficiency</span>
-              <span className="font-semibold">96.2%</span>
+              <span className="font-semibold">{s.battery_round_trip_efficiency_pct}%</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Current SOC</span>
@@ -179,7 +187,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Health Score</span>
-              <Badge variant="default" className="bg-chart-2/15 text-chart-2">98%</Badge>
+              <Badge variant="default" className="bg-chart-2/15 text-chart-2">{s.battery_health_pct}%</Badge>
             </div>
           </CardContent>
         </Card>
@@ -207,7 +215,12 @@ export default function AnalyticsPage() {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Smart Charging</span>
-              <Badge variant="default" className="bg-chart-5/15 text-chart-5">Active</Badge>
+              <Badge
+                variant={(snap?.counts.ev ?? 0) > 0 ? "default" : "outline"}
+                className={(snap?.counts.ev ?? 0) > 0 ? "bg-chart-5/15 text-chart-5" : ""}
+              >
+                {(snap?.counts.ev ?? 0) > 0 ? "Active" : "No EVs"}
+              </Badge>
             </div>
           </CardContent>
         </Card>
@@ -243,9 +256,9 @@ export default function AnalyticsPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Battery Health</span>
-                <span className="font-semibold">98%</span>
+                <span className="font-semibold">{s.battery_health_pct}%</span>
               </div>
-              <Progress value={98} className="h-2" />
+              <Progress value={s.battery_health_pct} className="h-2" />
             </div>
           </CardContent>
         </Card>

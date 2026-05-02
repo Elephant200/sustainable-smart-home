@@ -33,12 +33,22 @@ export async function GET() {
     ? computeSolarArrayInstant(context.solarConfigs[0], now)
     : undefined;
 
+  // Derive battery health from module count the same way analytics does so
+  // alerts and analytics agree on a single source of truth.
+  const moduleCount = battery ? 4 : 0;
+  const batteryHealthPct = battery
+    ? Array.from({ length: moduleCount }, (_, i) => 96 + (i % 4)).reduce(
+        (s, v) => s + v,
+        0
+      ) / Math.max(1, moduleCount)
+    : 100;
+
   const alerts = deriveAlerts({
     now,
     current,
     todayFlows,
     solarPanelInstant,
-    batteryHealthPct: 98,
+    batteryHealthPct,
     evCount: context.evConfigs.length,
   });
 

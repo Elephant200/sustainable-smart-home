@@ -8,7 +8,7 @@ import {
   DollarSign, AlertTriangle, CheckCircle, Info, TrendingUp, Shield, Cloud,
 } from "lucide-react";
 import { SkeletonChartCard } from "@/components/ui/skeleton";
-import { useAlerts } from "@/lib/hooks/use-energy-data";
+import { useAlerts, useAnalytics } from "@/lib/hooks/use-energy-data";
 import type { AlertsResponse } from "@/lib/hooks/use-energy-data";
 
 type Notification = AlertsResponse["alerts"][number];
@@ -86,6 +86,7 @@ function NotificationCard({ notification }: { notification: Notification }) {
 
 export default function AlertsPage() {
   const { data, loading, error } = useAlerts();
+  const { data: analytics, loading: analyticsLoading } = useAnalytics();
 
   if (loading) {
     return (
@@ -173,8 +174,18 @@ export default function AlertsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-primary">98%</div>
-            <div className="text-sm text-muted-foreground">All systems optimal</div>
+            <div className="text-3xl font-bold text-primary">
+              {analyticsLoading ? "…" : `${analytics?.summary.system_health_pct ?? 0}%`}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {analyticsLoading
+                ? " "
+                : (analytics?.summary.system_health_pct ?? 0) >= 95
+                  ? "All systems optimal"
+                  : (analytics?.summary.system_health_pct ?? 0) >= 85
+                    ? "Healthy with minor issues"
+                    : "Attention recommended"}
+            </div>
           </CardContent>
         </Card>
       </div>

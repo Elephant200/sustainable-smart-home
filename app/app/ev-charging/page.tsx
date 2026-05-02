@@ -200,17 +200,19 @@ export default function EVChargingPage() {
                 <div className="flex justify-between items-center" key={v.id}>
                   <span className="text-sm">{v.name}</span>
                   <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">
-                    10:00 PM – {String(v.departure_time).slice(0, 5)}
+                    {v.schedule_window_label}
                   </Badge>
                 </div>
               ))}
               <div className="flex justify-between items-center">
                 <span className="text-sm">Priority Mode</span>
-                <Badge variant="default" className="bg-chart-5/15 text-chart-5">Solar First</Badge>
+                <Badge variant="default" className="bg-chart-5/15 text-chart-5">
+                  {summary.priority_mode_label}
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Off-Peak Hours</span>
-                <span className="font-semibold">10 PM – 6 AM</span>
+                <span className="font-semibold">{summary.off_peak_window_label}</span>
               </div>
             </div>
           </CardContent>

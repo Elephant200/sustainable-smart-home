@@ -11,6 +11,7 @@ import {
   computeEvChargeRateKw,
   isOvernightWindow,
 } from './ev';
+import { RESERVE_FRACTION } from './constants';
 
 export interface BatteryDeviceConfig {
   id: string;
@@ -25,7 +26,6 @@ export interface BatteryInstantState {
 }
 
 const STARTING_SOC_FRACTION = 0.4;
-const RESERVE_FRACTION = 0.15;
 
 function stepBattery(
   prevSocKwh: number,

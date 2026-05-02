@@ -79,6 +79,10 @@ export default function BatteryPage() {
   const lastDischargeKwh = history
     .filter((h) => h.power_kw < 0)
     .reduce((s, h) => s + -h.power_kw, 0);
+  const backupHours =
+    battery.critical_load_kw > 0
+      ? battery.soc_kwh / battery.critical_load_kw
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -135,10 +139,12 @@ export default function BatteryPage() {
             <div className="text-3xl font-bold text-chart-5">
               {isCharging
                 ? `${battery.hours_to_full.toFixed(1)} hrs`
-                : `${(battery.soc_kwh / Math.max(0.5, 2.5)).toFixed(1)} hrs`}
+                : `${backupHours.toFixed(1)} hrs`}
             </div>
             <div className="text-sm text-muted-foreground">
-              {isCharging ? "At current charge rate" : "At 2.5 kW critical loads"}
+              {isCharging
+                ? "At current charge rate"
+                : `At ${battery.critical_load_kw.toFixed(1)} kW critical loads`}
             </div>
           </CardContent>
         </Card>
@@ -152,7 +158,7 @@ export default function BatteryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-primary">{battery.health_pct}%</div>
-            <div className="text-sm text-muted-foreground">Excellent condition</div>
+            <div className="text-sm text-muted-foreground">{battery.health_label}</div>
           </CardContent>
         </Card>
       </div>
@@ -223,7 +229,7 @@ export default function BatteryPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Round-trip Efficiency</span>
-                <span className="font-semibold">96.2%</span>
+                <span className="font-semibold">{battery.round_trip_efficiency_pct}%</span>
               </div>
             </div>
           </CardContent>
@@ -245,8 +251,15 @@ export default function BatteryPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Cooling Status</span>
-                <Badge variant="outline" className="bg-chart-2/10 text-chart-2 border-chart-2/30">
-                  Active
+                <Badge
+                  variant="outline"
+                  className={
+                    battery.cooling_active
+                      ? "bg-chart-2/10 text-chart-2 border-chart-2/30"
+                      : "bg-muted text-muted-foreground"
+                  }
+                >
+                  {battery.cooling_active ? "Active" : "Standby"}
                 </Badge>
               </div>
               <div className="flex justify-between items-center">
@@ -278,19 +291,31 @@ export default function BatteryPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Time-of-Use Optimization</span>
-                <Badge variant="default" className="bg-primary/15 text-primary">Enabled</Badge>
+                <Badge
+                  variant={battery.tou_enabled ? "default" : "outline"}
+                  className={battery.tou_enabled ? "bg-primary/15 text-primary" : ""}
+                >
+                  {battery.tou_enabled ? "Enabled" : "Disabled"}
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Peak Shaving</span>
-                <Badge variant="default" className="bg-chart-2/15 text-chart-2">Active</Badge>
+                <Badge
+                  variant={battery.peak_shaving_enabled ? "default" : "outline"}
+                  className={battery.peak_shaving_enabled ? "bg-chart-2/15 text-chart-2" : ""}
+                >
+                  {battery.peak_shaving_enabled ? "Active" : "Inactive"}
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Reserve Floor</span>
-                <span className="font-semibold">15%</span>
+                <span className="font-semibold">{battery.reserve_floor_pct}%</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Grid Services</span>
-                <Badge variant="outline">Available</Badge>
+                <Badge variant="outline">
+                  {battery.grid_services_enabled ? "Available" : "Unavailable"}
+                </Badge>
               </div>
             </div>
           </CardContent>
@@ -308,7 +333,7 @@ export default function BatteryPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Available Backup</span>
-                <span className="font-semibold">{Math.max(0, battery.soc_kwh - 0.15 * battery.capacity_kwh).toFixed(1)} kWh</span>
+                <span className="font-semibold">{battery.available_backup_kwh.toFixed(1)} kWh</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Discharge Today</span>
@@ -316,11 +341,15 @@ export default function BatteryPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Backup Mode</span>
-                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">Ready</Badge>
+                <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+                  {battery.backup_mode_label}
+                </Badge>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Grid Connection</span>
-                <Badge variant="default" className="bg-primary/15 text-primary">Online</Badge>
+                <Badge variant="default" className="bg-primary/15 text-primary">
+                  {battery.grid_connection_label}
+                </Badge>
               </div>
             </div>
           </CardContent>

@@ -226,11 +226,11 @@ export default function SolarPage() {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-sm">Battery Stored</span>
-                <span className="font-semibold">{summary.battery_stored_kwh.toFixed(1)}%</span>
+                <span className="font-semibold">{summary.battery_stored_kwh.toFixed(1)} kWh</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Storage Efficiency</span>
-                <span className="font-semibold">96%</span>
+                <span className="font-semibold">{summary.storage_efficiency_pct}%</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm">Grid Independence</span>

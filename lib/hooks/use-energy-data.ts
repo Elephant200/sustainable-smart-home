@@ -110,6 +110,12 @@ export interface AnalyticsResponse {
     ytd_savings_usd: number;
     ytd_carbon_tons: number;
     uptime_pct: number;
+    prev_month_savings_usd: number;
+    month_over_month_savings_pct: number;
+    battery_round_trip_efficiency_pct: number;
+    storage_efficiency_pct: number;
+    battery_health_pct: number;
+    system_health_pct: number;
   };
   monthly: {
     month: string;
@@ -172,8 +178,20 @@ export interface BatteryResponse {
     power_kw: number;
     hours_to_full: number;
     health_pct: number;
+    health_label: string;
     charged_today_kwh: number;
     discharged_today_kwh: number;
+    round_trip_efficiency_pct: number;
+    reserve_floor_pct: number;
+    reserve_kwh: number;
+    available_backup_kwh: number;
+    critical_load_kw: number;
+    cooling_active: boolean;
+    tou_enabled: boolean;
+    peak_shaving_enabled: boolean;
+    grid_services_enabled: boolean;
+    backup_mode_label: string;
+    grid_connection_label: string;
   } | null;
   modules: {
     id: number;
@@ -203,6 +221,7 @@ export interface EvResponse {
     last_charged_label: string;
     efficiency: string;
     departure_time: string;
+    schedule_window_label: string;
   }[];
   history: { time: string; total_kw: number; per_vehicle: Record<string, number> }[];
   summary: {
@@ -212,6 +231,9 @@ export interface EvResponse {
     cost_savings_usd: number;
     clean_energy_pct: number;
     month_energy_mwh: number;
+    off_peak_window_label: string;
+    off_peak_start_label: string;
+    priority_mode_label: string;
   };
 }
 

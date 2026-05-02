@@ -41,6 +41,9 @@ export default function DashboardPage() {
   const dailySavings = analytics?.summary.daily_savings_usd ?? 0;
   const monthlySavings = analytics?.summary.monthly_savings_usd ?? 0;
   const carbonReduced = analytics?.summary.carbon_reduced_tons_month ?? 0;
+  const systemHealth = analytics?.summary.system_health_pct ?? 0;
+  const systemStatusLabel =
+    systemHealth >= 95 ? "Optimal" : systemHealth >= 85 ? "Healthy" : "Attention";
   const activeAlerts =
     alerts?.alerts.filter((a) => a.status === "active").length ?? 0;
 
@@ -198,14 +201,16 @@ export default function DashboardPage() {
             <CardDescription>Current system health</CardDescription>
             <CardAction>
               <Badge variant="default" className="bg-primary/15 text-primary">
-                Optimal
+                {analyticsLoading ? "…" : systemStatusLabel}
               </Badge>
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm">System Health</span>
-              <span className="font-semibold text-primary">98%</span>
+              <span className="font-semibold text-primary">
+                {analyticsLoading ? "…" : `${systemHealth}%`}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm">Active Alerts</span>

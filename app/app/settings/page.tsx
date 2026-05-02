@@ -7,6 +7,7 @@ import { SettingsNavigation } from "@/components/settings/settings-navigation";
 import { ConfigurationAlert } from "@/components/settings/configuration-alert";
 import { LocationSelector } from "@/components/settings/location-selector";
 import { DeviceConfiguration } from "@/components/settings/device-configuration";
+import { NotificationSettingsCard } from "@/components/settings/notification-settings-card";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import type { Metadata } from "next";
 
@@ -75,6 +76,11 @@ export default async function SettingsPage() {
             </Card>
           </section>
           
+
+          {/* Notification Settings Section — toggles are real, persisted per-device via localStorage. */}
+          <section id="notification-settings" className="scroll-mt-6">
+            <NotificationSettingsCard />
+          </section>
 
           {/* Account Settings Section */}
           <section id="account-settings" className="scroll-mt-6">

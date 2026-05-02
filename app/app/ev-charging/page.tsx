@@ -63,7 +63,9 @@ function EVStatusCard({ vehicle }: { vehicle: Vehicle }) {
           </div>
           <div>
             <span className="text-muted-foreground">Efficiency</span>
-            <div className="font-semibold">{vehicle.efficiency}</div>
+            <div className="font-semibold">
+              {vehicle.efficiency_mi_per_kwh.toFixed(1)} mi/kWh
+            </div>
           </div>
         </div>
         <div className="text-xs text-muted-foreground">

@@ -1,19 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface FetchState<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 function useFetch<T>(url: string): FetchState<T> {
-  const [state, setState] = useState<FetchState<T>>({
+  const [state, setState] = useState<{
+    data: T | null;
+    loading: boolean;
+    error: string | null;
+  }>({
     data: null,
     loading: true,
     error: null,
   });
+  // Bumping `tick` forces the effect to re-run, giving callers a clean
+  // refetch contract without leaking AbortControllers or fetch internals.
+  const [tick, setTick] = useState(0);
+  const refetch = useCallback(() => setTick((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -37,9 +46,9 @@ function useFetch<T>(url: string): FetchState<T> {
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [url, tick]);
 
-  return state;
+  return { ...state, refetch };
 }
 
 export interface SnapshotResponse {
@@ -212,7 +221,7 @@ export interface EvResponse {
     charge_rate_kw: number;
     time_to_full_label: string;
     last_charged_label: string;
-    efficiency: string;
+    efficiency_mi_per_kwh: number;
     departure_time: string;
     schedule_window_label: string;
   }[];

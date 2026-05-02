@@ -13,6 +13,7 @@ import {
   offPeakStartLabel,
   fmtClock12h,
   PRIORITY_MODE_LABEL,
+  EV_EFFICIENCY_MI_PER_KWH,
 } from '@/lib/simulation';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,27 @@ export async function GET() {
     0
   );
   let vehicleSurplus = Math.max(0, solarNow - computeHouseLoadInstant(now));
+
+  // Find when each vehicle most recently drew power. We walk back from `now`
+  // (up to 7 days) sampling the EV charge rate at hour boundaries — this is
+  // deterministic from the simulation model, no fake timestamp.
+  function findLastChargedAt(cfg: typeof context.evConfigs[number]): Date | null {
+    const cursor = new Date(now);
+    cursor.setMinutes(0, 0, 0);
+    for (let i = 0; i < 24 * 7; i++) {
+      const t = new Date(cursor.getTime() - i * 60 * 60 * 1000);
+      const surplus = Math.max(
+        0,
+        context.solarConfigs.reduce(
+          (s, c) => s + computeSolarArrayInstant(c, t).total_output_kw,
+          0
+        ) - computeHouseLoadInstant(t)
+      );
+      if (computeEvChargeRateKw(cfg, t, surplus) > 0.1) return t;
+    }
+    return null;
+  }
+
   const vehicles = context.evConfigs.map((cfg) => {
     const soc = computeEvSocPercent(cfg, now);
     const rate = computeEvChargeRateKw(cfg, now, vehicleSurplus);
@@ -65,7 +87,23 @@ export async function GET() {
     const status: 'charging' | 'completed' | 'disconnected' =
       rate > 0.1 ? 'charging' : soc >= cfg.target_charge * 100 - 0.5 ? 'completed' : 'disconnected';
     const lastChargedSoc = computeEvSocPercent(cfg, new Date(now.getTime() - 60 * 60 * 1000));
-    const lastChargedTime = rate > 0 ? 'Now' : fmtTime(new Date(startToday.getTime() + 6 * 3600000 + 23 * 60000));
+
+    let lastChargedLabel: string;
+    if (rate > 0.1) {
+      lastChargedLabel = 'Now';
+    } else {
+      const at = findLastChargedAt(cfg);
+      if (!at) {
+        lastChargedLabel = '—';
+      } else {
+        const ageMs = now.getTime() - at.getTime();
+        const ageHr = ageMs / 3600000;
+        if (ageHr < 1) lastChargedLabel = `${Math.max(1, Math.round(ageMs / 60000))} min ago`;
+        else if (at.toDateString() === now.toDateString()) lastChargedLabel = `Today ${fmtTime(at)}`;
+        else if (ageHr < 48) lastChargedLabel = `Yesterday ${fmtTime(at)}`;
+        else lastChargedLabel = `${Math.floor(ageHr / 24)} days ago`;
+      }
+    }
 
     const departureShort = fmtClock12h(String(cfg.departure_time).slice(0, 5));
     return {
@@ -80,8 +118,11 @@ export async function GET() {
       plugged_in: rate > 0 || isOvernightWindow(now),
       charge_rate_kw: Math.round(rate * 100) / 100,
       time_to_full_label: tt.label,
-      last_charged_label: lastChargedTime,
-      efficiency: '4.0 mi/kWh',
+      last_charged_label: lastChargedLabel,
+      // Efficiency is the simulator's documented model constant, not a
+      // hardcoded UI string. Real adapters that compute actual mi/kWh from
+      // telemetry will report their own value here.
+      efficiency_mi_per_kwh: EV_EFFICIENCY_MI_PER_KWH,
       departure_time: cfg.departure_time,
       schedule_window_label: `${offPeakStartLabel()} – ${departureShort}`,
       _diff: Math.round(soc - lastChargedSoc),

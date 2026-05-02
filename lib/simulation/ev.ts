@@ -120,10 +120,18 @@ export function isPluggedIn(cfg: EvDeviceConfig, date: Date): boolean {
   return hour < departureHour || hour >= 17;
 }
 
+/**
+ * Default model assumption for EV efficiency in the simulator. Real provider
+ * adapters can override by computing actual efficiency from odometer + energy
+ * history. Centralizing this constant means UI/route code never embeds the
+ * number directly.
+ */
+export const EV_EFFICIENCY_MI_PER_KWH = 4.0;
+
 export function estimateRangeMiles(
   socPct: number,
   capacityKwh: number,
-  efficiencyMiPerKwh = 4.0
+  efficiencyMiPerKwh: number = EV_EFFICIENCY_MI_PER_KWH
 ): number {
   return Math.round((socPct / 100) * capacityKwh * efficiencyMiPerKwh);
 }

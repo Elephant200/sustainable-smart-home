@@ -20,6 +20,9 @@ import {
   generatePkce,
 } from '@/lib/server/oauth-providers';
 import { checkWriteRateLimit } from '@/lib/api/rate-limit';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ route: '/api/auth/oauth/[provider]/start' });
 
 const COOKIE_MAX_AGE_SEC = 600;
 
@@ -40,6 +43,12 @@ export async function GET(
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: user.id,
+  });
+  reqLog.info('oauth start', { provider });
 
   const rateLimitError = checkWriteRateLimit(req, user.id);
   if (rateLimitError) return rateLimitError;

@@ -8,8 +8,11 @@ import { allocateFlowEdges } from '@/lib/simulation/flows';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
 import { getPollingConfig } from '@/lib/server/polling-config';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
 import type { ProviderType } from '@/lib/adapters/types';
+
+const log = createLogger({ route: '/api/energy/snapshot' });
 
 const NoQuerySchema = z.object({}).strict();
 
@@ -239,6 +242,13 @@ export async function GET(req: NextRequest) {
 
   const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: result.context.user.id,
+  });
+  reqLog.info('snapshot request');
+
   const { rawDevices, solarConfigs, batteryConfigs, evConfigs, user } = context;
 
   const adapterCtx = {

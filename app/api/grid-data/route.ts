@@ -3,7 +3,10 @@ import { getUserZoneKey } from "@/lib/user-profile";
 import { NextRequest, NextResponse } from "next/server";
 import { checkReadRateLimit } from "@/lib/api/rate-limit";
 import { validateQuery } from "@/lib/api/validate";
+import { createLogger } from "@/lib/logger";
 import { z } from "zod";
+
+const log = createLogger({ route: '/api/grid-data' });
 
 const NoQuerySchema = z.object({}).strict();
 
@@ -14,6 +17,11 @@ export async function GET(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: user.id,
+  });
 
   const rateLimitError = checkReadRateLimit(req, user.id);
   if (rateLimitError) return rateLimitError;
@@ -30,7 +38,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data);
     
   } catch (error) {
-    console.error(error);
+    reqLog.error('grid-data fetch error', { error: error instanceof Error ? error.message : String(error) });
     if (error instanceof Error) {
       if (error.message === "Profile not found") {
         return NextResponse.json({ error: "Profile not found" }, { status: 500 });

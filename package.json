@@ -7,6 +7,9 @@
     "lint": "node scripts/check-no-hardcoded-colors.mjs && eslint .",
     "lint:colors": "node scripts/check-no-hardcoded-colors.mjs",
     "test": "tsx --test lib/**/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
     "migrate:reencrypt": "tsx scripts/migrate-reencrypt.ts"
   },
   "dependencies": {
@@ -34,6 +37,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",

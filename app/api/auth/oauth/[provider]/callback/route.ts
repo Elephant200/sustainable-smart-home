@@ -10,12 +10,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { encryptConnectionConfig, decryptConnectionConfig } from '@/lib/crypto/connection-config';
 import { recordAuditEvent } from '@/lib/audit/log';
 import { isOAuthProvider, OAUTH_PROVIDERS } from '@/lib/server/oauth-providers';
 import { getClientIp } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
+import { reportError } from '@/lib/reporter';
 
 const SETTINGS_URL = '/app/settings';
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -25,6 +27,8 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> }
 ) {
   const { provider } = await params;
+  const hdrs = await headers();
+  const log = createLogger({ route: `/api/auth/oauth/${provider}/callback`, request_id: hdrs.get('x-request-id') ?? undefined, provider });
 
   if (!isOAuthProvider(provider)) {
     return errorRedirect('Unknown OAuth provider');
@@ -36,7 +40,7 @@ export async function GET(
 
   if (errorParam) {
     const desc = req.nextUrl.searchParams.get('error_description') ?? errorParam;
-    console.warn(`[oauth/${provider}] Provider returned error: ${desc}`);
+    log.warn('Provider returned error', { error_description: desc });
     return errorRedirect(`OAuth error: ${desc}`);
   }
 
@@ -55,7 +59,7 @@ export async function GET(
   cookieStore.delete(`${cookiePrefix}_code_verifier`);
 
   if (!storedState || storedState !== returnedState) {
-    console.warn(`[oauth/${provider}] State mismatch — possible CSRF`);
+    log.warn('State mismatch — possible CSRF');
     return errorRedirect('State parameter mismatch; please try connecting again');
   }
 
@@ -89,9 +93,7 @@ export async function GET(
   // Prevents a CSRF-style substitution where a start for provider A
   // completes against a device configured for provider B.
   if (device.provider_type !== provider) {
-    console.warn(
-      `[oauth/${provider}] provider mismatch: device ${deviceId} has provider_type "${device.provider_type}"`
-    );
+    log.warn('Provider mismatch', { device_id: deviceId, device_provider: device.provider_type });
     return errorRedirect('Provider mismatch; please try connecting again');
   }
 
@@ -119,7 +121,8 @@ export async function GET(
       basicAuth: cfg.basicAuth,
     });
   } catch (err) {
-    console.error(`[oauth/${provider}] Token exchange failed:`, err);
+    log.error('Token exchange failed', { error: err instanceof Error ? err.message : String(err) });
+    reportError(err, { route: `/api/auth/oauth/${provider}/callback`, provider });
     return errorRedirect(`Token exchange failed: ${err instanceof Error ? err.message : 'unknown'}`);
   }
 
@@ -158,7 +161,7 @@ export async function GET(
     .eq('user_id', user.id);
 
   if (updateError) {
-    console.error(`[oauth/${provider}] Failed to persist tokens:`, updateError);
+    log.error('Failed to persist tokens', { error: updateError.message, device_id: deviceId });
     return errorRedirect('Failed to save connection tokens');
   }
 

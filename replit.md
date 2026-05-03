@@ -215,3 +215,55 @@ TESLA_CLIENT_ID=  # Tesla Fleet API OAuth app client ID (also usable per-device)
 ENPHASE_CLIENT_ID=     # Enphase Enlighten OAuth app client ID
 ENPHASE_CLIENT_SECRET= # Enphase Enlighten OAuth app client secret
 ```
+
+---
+
+## Observability & Testing (Task #19)
+
+### Structured Logger (`lib/logger.ts`)
+
+`createLogger(ctx)` returns a `Logger` with four levels (`debug`, `info`, `warn`, `error`). Each call emits a single-line JSON record to stdout/stderr. Standard context fields: `level`, `ts`, `msg`, `request_id`, `user_id`, `route`, `provider`. Sensitive keys (`token`, `secret`, `password`, `api_key`, `credential`, `__encrypted`) are redacted from extra fields at all depths. `logger.child(extra)` produces a child logger that inherits parent context.
+
+### Request ID (`middleware.ts`)
+
+Middleware generates a UUID v4 `x-request-id` header per request (or passes through an upstream-supplied one). The same ID echoes back in the `X-Request-Id` response header for client-side correlation.
+
+### Error Reporter (`lib/reporter.ts`)
+
+`reportError(err, ctx)` ships a Sentry-compatible envelope to `SENTRY_DSN` when the variable is set; no-ops otherwise. `initClientReporter()` wires browser `onerror` + `unhandledrejection` to `NEXT_PUBLIC_SENTRY_DSN`. Sensitive tags are scrubbed before upload.
+
+### Health Endpoint (`app/api/health/route.ts`)
+
+`GET /api/health` — public, no auth. Returns `{ status, version, db: { ok, latency_ms }, providers: { [type]: { total, disconnected } } }`. HTTP 200 when DB reachable, 503 otherwise. `disconnected` counts devices with ≥ 3 consecutive sync failures. Sets `Cache-Control: no-store`.
+
+### Provider Fixtures (`lib/adapters/providers/fixtures/`)
+
+12 real-shape JSON fixtures for all five providers (Tesla, Enphase, SolarEdge, Emporia, Home Assistant). Used as fetch-mock payloads in adapter unit tests.
+
+### Unit Tests
+
+37 tests across 5 suites; runner: `tsx --test` (Node.js built-in, matching pre-existing `lib/crypto/connection-config.test.ts` pattern). Test files: `lib/logger.test.ts`, `lib/api/rate-limit.test.ts`, `lib/api/validate.test.ts`, `lib/audit/log.test.ts`, `lib/adapters/providers/{tesla,enphase,solaredge,home-assistant,emporia}.test.ts`. Adapter tests replace `globalThis.fetch` with fixture-backed stubs in `beforeEach`/`afterEach`.
+
+### E2E Tests (`e2e/`)
+
+Playwright (Chromium + Firefox). Five spec files: `health.spec.ts`, `public.spec.ts`, `login.spec.ts`, `rate-limit.spec.ts`, `user-journey.spec.ts`. Config: `playwright.config.ts`. Browser binaries must be installed once: `npx playwright install --with-deps chromium firefox`.
+
+### New Scripts
+
+```bash
+npm test            # unit tests (tsx --test lib/**/*.test.ts)
+npm run test:e2e    # Playwright e2e (playwright test)
+npm run test:e2e:ui # Interactive Playwright UI
+```
+
+### Documentation
+
+- `TESTING.md` — test infrastructure, how to run, fixture catalogue, CI notes
+- `OBSERVABILITY.md` — logger API, request IDs, error reporter, health endpoint, log aggregation
+
+### New Optional Environment Variables
+```
+SENTRY_DSN=                  # Server-side error reporting (Sentry-compatible)
+NEXT_PUBLIC_SENTRY_DSN=      # Client-side error reporting
+NEXT_PUBLIC_APP_VERSION=     # Displayed in /api/health version field
+```

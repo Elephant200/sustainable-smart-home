@@ -15,6 +15,9 @@ import {
   decryptConnectionConfig,
   encryptConnectionConfig,
 } from '@/lib/crypto/connection-config';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ route: 'lib/server/device-context' });
 
 export interface UserDeviceContext {
   user: User;
@@ -208,10 +211,7 @@ export async function loadUserContext(): Promise<
       .eq('id', deviceId)
       .eq('user_id', user.id);
     if (error) {
-      console.error(
-        `[device-context] Failed to persist rotated credentials for device ${deviceId}:`,
-        error
-      );
+      log.error('Failed to persist rotated credentials', { device_id: deviceId, error: error.message });
     }
   };
 

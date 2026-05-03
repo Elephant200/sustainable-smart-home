@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Fraunces } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { headers } from "next/headers";
+import { ClientReporterInit } from "@/components/client-reporter-init";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -47,6 +48,7 @@ export default async function RootLayout({
           disableTransitionOnChange
           nonce={nonce}
         >
+          <ClientReporterInit />
           {children}
         </ThemeProvider>
       </body>

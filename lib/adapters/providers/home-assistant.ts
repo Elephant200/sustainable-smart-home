@@ -30,6 +30,9 @@ import {
   ConnectionSchema,
   hasStoredCredentials,
 } from '../types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ provider: 'home_assistant' });
 
 interface HaConnectionConfig {
   base_url?: string;
@@ -206,9 +209,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
     const cfg = this.cfg();
     const v = validateHomeAssistantUrl(cfg.base_url);
     if (!v.ok) {
-      console.warn(
-        `[home-assistant] ${this.device.name}: blocked URL ${cfg.base_url}: ${v.reason}`
-      );
+      log.warn('blocked URL', { device_id: this.device.id, device_name: this.device.name, url: cfg.base_url, reason: v.reason });
       return null;
     }
     // Strip any trailing slash and any path the user pasted past the host;
@@ -230,9 +231,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
    */
   private unavailableStatus(reason: string): DeviceStatus {
     if (reason) {
-      console.warn(
-        `[home-assistant] ${this.device.name}: live data unavailable — ${reason}`
-      );
+      log.warn('live data unavailable', { device_id: this.device.id, device_name: this.device.name, reason });
     }
     return {
       deviceId: this.device.id,
@@ -373,9 +372,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
         cfg.token
       );
       if (!res.ok) {
-        console.warn(
-          `[home-assistant] ${this.device.name}: power_entity_id HTTP ${res.status}`
-        );
+        log.warn('power_entity_id HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
         return null;
       }
       const entity = (await res.json()) as HaState;
@@ -390,9 +387,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
         reportedUnit !== 'kw' &&
         reportedUnit !== 'mw'
       ) {
-        console.warn(
-          `[home-assistant] ${this.device.name}: power_entity_id reports "${reportedUnit}", expected W/kW/MW`
-        );
+        log.warn('power_entity_id reports unexpected unit', { device_id: this.device.id, device_name: this.device.name, unit: reportedUnit });
         return null;
       }
       return reportedUnit === 'w'
@@ -401,11 +396,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
           ? raw * 1000
           : raw;
     } catch (err) {
-      console.warn(
-        `[home-assistant] ${this.device.name}: power_entity_id fetch failed — ${
-          err instanceof Error ? err.message : 'unknown'
-        }`
-      );
+      log.warn('power_entity_id fetch failed', { device_id: this.device.id, device_name: this.device.name, error: err instanceof Error ? err.message : 'unknown' });
       return null;
     }
   }
@@ -467,9 +458,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
         `&end_time=${encodeURIComponent(end)}&minimal_response=true`;
       const res = await haFetch(url, cfg.token);
       if (!res.ok) {
-        console.warn(
-          `[home-assistant] ${this.device.name}: history HTTP ${res.status}; returning empty`
-        );
+        log.warn('history HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
         return [];
       }
       const json = (await res.json()) as Array<
@@ -563,11 +552,7 @@ export class HomeAssistantAdapter implements DeviceAdapter {
       }
       return deltas;
     } catch (err) {
-      console.warn(
-        `[home-assistant] ${this.device.name}: history fetch failed — ${
-          err instanceof Error ? err.message : 'unknown'
-        }; returning empty`
-      );
+      log.warn('history fetch failed', { device_id: this.device.id, device_name: this.device.name, error: err instanceof Error ? err.message : 'unknown' });
       return [];
     }
   }

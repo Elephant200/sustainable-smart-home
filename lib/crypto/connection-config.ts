@@ -18,6 +18,9 @@
  */
 
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ route: 'lib/crypto/connection-config' });
 
 const ALGORITHM = 'aes-256-gcm';
 export const CURRENT_KEY_VERSION = 'v1';
@@ -45,6 +48,11 @@ function buildKeyMap(): Map<string, Buffer> {
 }
 
 let _keyMap: Map<string, Buffer> | null = null;
+
+/** Exposed only for unit tests that need to reset the cached key map. */
+export function __resetKeyMapForTesting(): void {
+  _keyMap = null;
+}
 
 function getKeyMap(): Map<string, Buffer> {
   if (_keyMap) return _keyMap;
@@ -151,13 +159,13 @@ export function decryptConnectionConfig(
       version = 'v1';
       [ivHex, tagHex, ciphertextHex] = parts;
     } else {
-      console.error('[connection-config] Unexpected encrypted payload format');
+      log.error('Unexpected encrypted payload format');
       return {};
     }
 
     const key = getKeyForVersion(version);
     if (!key) {
-      console.error(`[connection-config] No key available for version "${version}". Cannot decrypt.`);
+      log.error('No key available for encrypted version', { version });
       return {};
     }
 
@@ -174,7 +182,7 @@ export function decryptConnectionConfig(
 
     return JSON.parse(decrypted.toString('utf8'));
   } catch (err) {
-    console.error('[connection-config] Decryption failed:', err);
+    log.error('Decryption failed', { error: err instanceof Error ? err.message : String(err) });
     return {};
   }
 }

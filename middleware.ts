@@ -4,12 +4,22 @@ import { type NextRequest, NextResponse } from "next/server";
 function generateNonce(): string {
   const bytes = new Uint8Array(16);
   globalThis.crypto.getRandomValues(bytes);
-  // btoa produces a base64 string safe for use in CSP nonce directives.
   return btoa(String.fromCharCode(...bytes));
+}
+
+function generateRequestId(): string {
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  // Format as UUID v4
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20)}`;
 }
 
 export async function middleware(request: NextRequest) {
   const nonce = generateNonce();
+  const requestId = request.headers.get('x-request-id') ?? generateRequestId();
 
   // React dev mode requires 'unsafe-eval' for fast refresh / error overlay
   // callstack reconstruction. Production builds never use eval, so we gate
@@ -35,11 +45,11 @@ export async function middleware(request: NextRequest) {
     "form-action 'self'",
   ].join("; ");
 
-  // Inject nonce into request headers so server components can read it via
-  // next/headers headers(). Must build a new Headers object — NextRequest
-  // headers are read-only.
+  // Inject nonce and request-id into request headers so server components
+  // can read them via next/headers headers().
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("x-request-id", requestId);
 
   // Run the Supabase session middleware with the original request so it can
   // read/write auth cookies correctly.
@@ -48,12 +58,12 @@ export async function middleware(request: NextRequest) {
   // For redirects (auth-required routes), attach CSP and pass through.
   if (supabaseResponse.status !== 200) {
     supabaseResponse.headers.set("Content-Security-Policy", csp);
+    supabaseResponse.headers.set("X-Request-Id", requestId);
     return supabaseResponse;
   }
 
-  // Build a response that forwards the modified request headers (with x-nonce)
-  // to server components. This is the mechanism Next.js uses to propagate
-  // per-request values into headers().
+  // Build a response that forwards the modified request headers (with x-nonce
+  // and x-request-id) to server components.
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
@@ -72,8 +82,9 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  // Apply the nonce-bearing CSP header.
+  // Apply the nonce-bearing CSP header and request-id.
   response.headers.set("Content-Security-Policy", csp);
+  response.headers.set("X-Request-Id", requestId);
 
   return response;
 }

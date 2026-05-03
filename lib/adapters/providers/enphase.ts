@@ -33,6 +33,9 @@ import {
   ConnectionSchema,
   hasStoredCredentials,
 } from '../types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ provider: 'enphase' });
 
 interface EnphaseConnectionConfig {
   api_key?: string;
@@ -95,9 +98,7 @@ export class EnphaseAdapter implements DeviceAdapter {
    */
   private unavailableStatus(reason: string): DeviceStatus {
     if (reason)
-      console.warn(
-        `[enphase] ${this.device.name}: live data unavailable — ${reason}`
-      );
+      log.warn('live data unavailable', { device_id: this.device.id, device_name: this.device.name, reason });
     return {
       deviceId: this.device.id,
       providerType: 'enphase',
@@ -162,11 +163,7 @@ export class EnphaseAdapter implements DeviceAdapter {
       try {
         await this.persister(newCfg as Record<string, unknown>);
       } catch (err) {
-        console.warn(
-          `[enphase] ${this.device.name}: failed to persist rotated tokens — ${
-            err instanceof Error ? err.message : 'unknown'
-          }`
-        );
+        log.warn('failed to persist rotated tokens', { device_id: this.device.id, error: err instanceof Error ? err.message : 'unknown' });
       }
     }
     return tokens.access_token;
@@ -304,9 +301,7 @@ export class EnphaseAdapter implements DeviceAdapter {
             `?start_at=${start_at}&granularity=${granularity}`
         );
         if (!res.ok) {
-          console.warn(
-            `[enphase] ${this.device.name}: battery history HTTP ${res.status}; returning empty`
-          );
+          log.warn('battery history HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
           return [];
         }
         const json = (await res.json()) as BatteryTelemetryResponse;
@@ -373,9 +368,7 @@ export class EnphaseAdapter implements DeviceAdapter {
           `?start_at=${start_at}&granularity=${granularity}`
       );
       if (!res.ok) {
-        console.warn(
-          `[enphase] ${this.device.name}: production history HTTP ${res.status}; returning empty`
-        );
+        log.warn('production history HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
         return [];
       }
       const json = (await res.json()) as ProductionTelemetryResponse;
@@ -406,11 +399,7 @@ export class EnphaseAdapter implements DeviceAdapter {
       }
       return out;
     } catch (err) {
-      console.warn(
-        `[enphase] ${this.device.name}: history fetch failed — ${
-          err instanceof Error ? err.message : 'unknown'
-        }; returning empty`
-      );
+      log.warn('history fetch failed', { device_id: this.device.id, device_name: this.device.name, error: err instanceof Error ? err.message : 'unknown' });
       return [];
     }
   }

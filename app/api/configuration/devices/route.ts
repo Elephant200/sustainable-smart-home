@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { ProviderType } from '@/lib/adapters/types';
 import {
@@ -8,6 +9,8 @@ import {
 import { checkReadRateLimit, checkWriteRateLimit } from '@/lib/api/rate-limit';
 import { validateBody, validateQuery, parseBody, getClientIp } from '@/lib/api/validate';
 import { recordAuditEvent } from '@/lib/audit/log';
+import { createLogger } from '@/lib/logger';
+import { reportError } from '@/lib/reporter';
 import { z } from 'zod';
 
 const VALID_PROVIDER_TYPES: ProviderType[] = [
@@ -34,11 +37,16 @@ const PostDeviceSchema = z.object({
 }).strict();
 
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();  
+  const hdrs = await headers();
+  const log = createLogger({ route: '/api/configuration/devices', request_id: hdrs.get('x-request-id') ?? undefined });
+
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const routeLog = log.child({ user_id: user.id });
 
   const rateLimitError = checkReadRateLimit(req, user.id);
   if (rateLimitError) return rateLimitError;
@@ -55,7 +63,7 @@ export async function GET(req: NextRequest) {
       .order('updated_at', { ascending: true });
 
     if (devicesError) {
-      console.error('Error fetching devices:', devicesError);
+      routeLog.error('Error fetching devices', { error: devicesError.message });
       return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 });
     }
 
@@ -108,13 +116,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ devices: devicesWithConfig });
 
   } catch (error) {
-    console.error('Error fetching devices:', error);
+    routeLog.error('Unexpected error fetching devices', { error: error instanceof Error ? error.message : String(error) });
+    reportError(error, { route: '/api/configuration/devices', userId: user.id });
     return NextResponse.json({ error: 'Failed to fetch devices' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();  
+  const hdrs = await headers();
+  const log = createLogger({ route: '/api/configuration/devices', request_id: hdrs.get('x-request-id') ?? undefined });
+
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -179,7 +191,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (deviceError) {
-      console.error('Error inserting device:', deviceError);
+      log.error('Error inserting device', { error: deviceError.message, user_id: user.id });
       return NextResponse.json({ error: 'Failed to create device' }, { status: 500 });
     }
 
@@ -216,7 +228,7 @@ export async function POST(req: NextRequest) {
             soc_kwh: config.capacity_kwh! * 0.5,
           });
         if (stateError) {
-          console.error('Error inserting battery state:', stateError);
+          log.warn('Error inserting battery state', { error: stateError.message });
           if (!configError) configError = stateError;
         }
         break;
@@ -243,7 +255,7 @@ export async function POST(req: NextRequest) {
             plugged_in: true,
           });
         if (evStateError) {
-          console.error('Error inserting ev state:', evStateError);
+          log.warn('Error inserting ev state', { error: evStateError.message });
           if (!configError) configError = evStateError;
         }
         break;
@@ -254,7 +266,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (configError) {
-      console.error('Error inserting device config:', configError);
+      log.error('Error inserting device config', { error: configError.message, user_id: user.id });
       await supabase.from('devices').delete().eq('id', device.id);
       return NextResponse.json({ error: 'Failed to create device configuration' }, { status: 500 });
     }
@@ -292,7 +304,8 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating device:', error);
+    log.error('Unexpected error creating device', { error: error instanceof Error ? error.message : String(error), user_id: user.id });
+    reportError(error, { route: '/api/configuration/devices', userId: user.id });
     return NextResponse.json({ error: 'Failed to create device' }, { status: 500 });
   }
 }

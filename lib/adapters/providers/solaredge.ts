@@ -28,6 +28,9 @@ import {
   ConnectionSchema,
   hasStoredCredentials,
 } from '../types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ provider: 'solaredge' });
 
 interface SeConnectionConfig {
   api_key?: string;
@@ -113,9 +116,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
    */
   private unavailableStatus(reason: string): DeviceStatus {
     if (reason)
-      console.warn(
-        `[solaredge] ${this.device.name}: live data unavailable — ${reason}`
-      );
+      log.warn('live data unavailable', { device_id: this.device.id, device_name: this.device.name, reason });
     return {
       deviceId: this.device.id,
       providerType: 'solaredge',
@@ -203,9 +204,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
           `&api_key=${encodeURIComponent(cfg.api_key)}`;
         const res = await seFetch(url);
         if (!res.ok) {
-          console.warn(
-            `[solaredge] ${this.device.name}: storageData HTTP ${res.status}; returning empty`
-          );
+          log.warn('storageData HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
           return [];
         }
         const json = (await res.json()) as {
@@ -266,9 +265,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
           `&api_key=${encodeURIComponent(cfg.api_key)}`;
         const res = await seFetch(url);
         if (!res.ok) {
-          console.warn(
-            `[solaredge] ${this.device.name}: powerDetails HTTP ${res.status}; returning empty`
-          );
+          log.warn('powerDetails HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
           return [];
         }
         const json = (await res.json()) as {
@@ -337,9 +334,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
           `&api_key=${encodeURIComponent(cfg.api_key)}`;
         const res = await seFetch(url);
         if (!res.ok) {
-          console.warn(
-            `[solaredge] ${this.device.name}: energy HTTP ${res.status}; returning empty`
-          );
+          log.warn('energy HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
           return [];
         }
         const json = (await res.json()) as {
@@ -380,9 +375,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
         `&api_key=${encodeURIComponent(cfg.api_key)}`;
       const res = await seFetch(url);
       if (!res.ok) {
-        console.warn(
-          `[solaredge] ${this.device.name}: energyDetails HTTP ${res.status}; returning empty`
-        );
+        log.warn('energyDetails HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
         return [];
       }
       const json = (await res.json()) as {
@@ -424,11 +417,7 @@ export class SolarEdgeAdapter implements DeviceAdapter {
           unit: 'kWh',
         }));
     } catch (err) {
-      console.warn(
-        `[solaredge] ${this.device.name}: history fetch failed — ${
-          err instanceof Error ? err.message : 'unknown'
-        }; returning empty`
-      );
+      log.warn('history fetch failed', { device_id: this.device.id, device_name: this.device.name, error: err instanceof Error ? err.message : 'unknown' });
       return [];
     }
   }

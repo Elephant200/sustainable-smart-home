@@ -1,0 +1,25 @@
+{
+  "response": [
+    {
+      "timestamp": "2024-06-15T06:00:00Z",
+      "solar_power": 500,
+      "battery_power": 0,
+      "load_power": 800,
+      "grid_power": 300
+    },
+    {
+      "timestamp": "2024-06-15T12:00:00Z",
+      "solar_power": 5000,
+      "battery_power": -2000,
+      "load_power": 2500,
+      "grid_power": -500
+    },
+    {
+      "timestamp": "2024-06-15T18:00:00Z",
+      "solar_power": 1200,
+      "battery_power": 1500,
+      "load_power": 3000,
+      "grid_power": 300
+    }
+  ]
+}

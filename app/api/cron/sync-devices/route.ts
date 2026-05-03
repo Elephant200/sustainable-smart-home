@@ -38,6 +38,9 @@ import {
   ingestGridHistory,
 } from '@/lib/server/sync-ingestion';
 import type { DeviceRecord, ProviderType } from '@/lib/adapters/types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ route: '/api/cron/sync-devices' });
 
 const SIMULATED: ProviderType = 'simulated';
 
@@ -45,6 +48,8 @@ export async function GET(req: NextRequest) {
   if (!verifyCronSecret(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const reqLog = log.child({ request_id: req.headers.get('x-request-id') ?? undefined });
 
   const supabase = createServiceClient();
 
@@ -55,14 +60,17 @@ export async function GET(req: NextRequest) {
     .neq('provider_type', SIMULATED);
 
   if (error) {
-    console.error('[sync-cron] Failed to load devices:', error);
+    reqLog.error('Failed to load devices', { error: error.message });
     return NextResponse.json({ error: 'Failed to load devices' }, { status: 500 });
   }
 
   const devices = rows ?? [];
   if (devices.length === 0) {
+    reqLog.info('cron sync: no active devices to sync');
     return NextResponse.json({ synced: 0, skipped: 0 });
   }
+
+  reqLog.info('cron sync started', { device_count: devices.length });
 
   const deviceIds = devices.map((d) => d.id);
 
@@ -226,9 +234,7 @@ export async function GET(req: NextRequest) {
         const is429 = status.error?.includes('429') || status.error?.toLowerCase().includes('rate limit');
         if (is429) {
           const backoffUntil = new Date(Date.now() + pollingCfg.backoffOnRateLimitSec * 1000);
-          console.warn(
-            `[sync-cron] device ${raw.id} rate-limited (429), backing off until ${backoffUntil.toISOString()}`
-          );
+          reqLog.warn('device rate-limited (429) on status, backing off', { device_id: raw.id, backoff_until: backoffUntil.toISOString() });
           await updateSyncState(device.id, userId, false, status.error ?? 'Rate limited', backoffUntil);
         } else {
           await updateSyncState(device.id, userId, false, status.error ?? 'Provider returned isLive:false');
@@ -315,13 +321,11 @@ export async function GET(req: NextRequest) {
         // Check for 429 in history fetch too.
         if (msg.includes('429') || msg.toLowerCase().includes('rate limit')) {
           const backoffUntil = new Date(Date.now() + pollingCfg.backoffOnRateLimitSec * 1000);
-          console.warn(
-            `[sync-cron] device ${raw.id} history fetch rate-limited, backing off until ${backoffUntil.toISOString()}`
-          );
+          reqLog.warn('device history fetch rate-limited, backing off', { device_id: raw.id, backoff_until: backoffUntil.toISOString() });
           await updateSyncState(device.id, userId, false, `History fetch rate-limited: ${msg}`, backoffUntil);
           continue;
         }
-        console.warn(`[sync-cron] history fetch failed for device ${device.id}:`, msg);
+        reqLog.warn('history fetch failed for device', { device_id: device.id, error: msg });
         // History failures are non-fatal — status ingest succeeded.
       }
 
@@ -332,10 +336,10 @@ export async function GET(req: NextRequest) {
       const is429 = msg.includes('429') || msg.toLowerCase().includes('rate limit');
       if (is429) {
         const backoffUntil = new Date(Date.now() + pollingCfg.backoffOnRateLimitSec * 1000);
-        console.warn(`[sync-cron] device ${raw.id} rate-limited (429), backing off`);
+        reqLog.warn('device rate-limited (429), backing off', { device_id: raw.id });
         await updateSyncState(device.id, userId, false, msg, backoffUntil);
       } else {
-        console.error(`[sync-cron] device ${device.id} sync failed:`, msg);
+        reqLog.error('device sync failed', { device_id: device.id, error: msg });
         await updateSyncState(device.id, userId, false, msg);
       }
     }
@@ -371,7 +375,7 @@ async function ingestEvHistory(
   for (const p of points) {
     // Validate: charge rate must be non-negative and plausible (cap at 350 kW — DC fast charge).
     if (!isFinite(p.value) || p.value < 0 || p.value > 350) {
-      console.warn(`[sync] ingestEvHistory: charge_kw=${p.value} outside [0,350], skipping`);
+      log.warn('ingestEvHistory: charge_kw outside [0,350], skipping', { device_id: device.id, value: p.value });
       continue;
     }
     const ts = new Date(p.timestamp);
@@ -412,7 +416,7 @@ async function ingestEvHistory(
   }));
 
   const { error } = await supabase.from('ev_charge_sessions').insert(rows);
-  if (error) console.warn(`[sync] ev_charge_sessions history for ${device.id}:`, error.message);
+  if (error) log.warn('ev_charge_sessions insert error', { device_id: device.id, error: error.message });
 }
 
 /**
@@ -435,7 +439,7 @@ async function ingestHouseHistory(
   for (const p of points) {
     // Validate: house energy must be non-negative and plausible (cap at 500 kWh/hr).
     if (!isFinite(p.value) || p.value < 0 || p.value > 500) {
-      console.warn(`[sync] ingestHouseHistory: energy_kwh=${p.value} outside [0,500], skipping`);
+      log.warn('ingestHouseHistory: energy_kwh outside [0,500], skipping', { device_id: device.id, value: p.value });
       continue;
     }
     const ts = new Date(p.timestamp);
@@ -464,7 +468,7 @@ async function ingestHouseHistory(
   }));
 
   const { error } = await supabase.from('house_load').insert(rows);
-  if (error) console.warn(`[sync] house_load history for ${device.id}:`, error.message);
+  if (error) log.warn('house_load insert error', { device_id: device.id, error: error.message });
 }
 
 function verifyCronSecret(req: NextRequest): boolean {
@@ -472,7 +476,7 @@ function verifyCronSecret(req: NextRequest): boolean {
   if (!secret) {
     // Fail closed: endpoint MUST be protected in production.
     // Set CRON_SECRET to a secure random string (32+ chars) before deploying.
-    console.error('[sync-cron] CRON_SECRET is not configured — rejecting all requests');
+    log.error('CRON_SECRET is not configured — rejecting all requests');
     return false;
   }
 

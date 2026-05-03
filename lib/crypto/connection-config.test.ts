@@ -112,3 +112,55 @@ test('decrypts legacy unversioned format (3-part: iv:tag:ciphertext)', () => {
   const result = decryptConnectionConfig(legacyPayload);
   assert.deepEqual(result, { legacy: true });
 });
+
+// ---------------------------------------------------------------------------
+// Missing / misconfigured key scenarios
+// ---------------------------------------------------------------------------
+
+test('throws immediately when CONNECTION_CONFIG_SECRET is wrong length (not 64 hex chars)', () => {
+  // buildKeyMap() validates key length before storing in the cache, so a bad
+  // key causes an eager throw even before any encrypt/decrypt is attempted.
+  // We reset the cache so the module re-reads the environment variable.
+  const { __resetKeyMapForTesting } = require('./connection-config');
+  const original = process.env.CONNECTION_CONFIG_SECRET;
+  try {
+    __resetKeyMapForTesting();
+    process.env.CONNECTION_CONFIG_SECRET = 'tooshort'; // 9 chars — invalid
+    assert.throws(
+      () => encryptConnectionConfig({ x: 1 }),
+      (err: unknown) => err instanceof Error && /64-character hex string/.test(err.message)
+    );
+  } finally {
+    process.env.CONNECTION_CONFIG_SECRET = original;
+    __resetKeyMapForTesting(); // restore so remaining tests use the valid key
+  }
+});
+
+test('missing key: throws in non-test env, uses fallback in test env', () => {
+  // The module has two distinct behaviors depending on NODE_ENV:
+  //   NODE_ENV=test   → uses 'b'.repeat(64) fallback so tests never fail on key absence
+  //   NODE_ENV!=test  → throws immediately so misconfigured servers fail loudly at startup
+  const { __resetKeyMapForTesting } = require('./connection-config');
+  const originalKey = process.env.CONNECTION_CONFIG_SECRET;
+  try {
+    __resetKeyMapForTesting();
+    delete process.env.CONNECTION_CONFIG_SECRET;
+
+    if (process.env.NODE_ENV === 'test') {
+      // test-environment fallback: encrypt/decrypt still works with no key configured
+      const encrypted = encryptConnectionConfig({ safe: true });
+      assert.ok(encrypted.__encrypted.length > 0);
+      assert.deepEqual(decryptConnectionConfig(encrypted), { safe: true });
+    } else {
+      // production/non-test environment: must throw a clear diagnostic error
+      assert.throws(
+        () => encryptConnectionConfig({ safe: true }),
+        (err: unknown) =>
+          err instanceof Error && /No encryption key configured/.test(err.message)
+      );
+    }
+  } finally {
+    process.env.CONNECTION_CONFIG_SECRET = originalKey;
+    __resetKeyMapForTesting();
+  }
+});

@@ -1,0 +1,12 @@
+{
+  "entity_id": "sensor.battery_soc",
+  "state": "72.3",
+  "attributes": {
+    "unit_of_measurement": "%",
+    "friendly_name": "Battery State of Charge",
+    "device_class": "battery",
+    "state_class": "measurement"
+  },
+  "last_changed": "2024-06-15T14:25:00.000Z",
+  "last_updated": "2024-06-15T14:30:00.000Z"
+}

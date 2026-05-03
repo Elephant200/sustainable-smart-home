@@ -1,0 +1,25 @@
+{
+  "system_id": 67890,
+  "granularity": "15mins",
+  "total_devices": 1,
+  "intervals": [
+    {
+      "end_at": 1718460000,
+      "soc": { "percent": 85 },
+      "charge": { "enwh": 375 },
+      "discharge": { "enwh": 0 }
+    },
+    {
+      "end_at": 1718460900,
+      "soc": { "percent": 87 },
+      "charge": { "enwh": 400 },
+      "discharge": { "enwh": 0 }
+    },
+    {
+      "end_at": 1718461800,
+      "soc": { "percent": 88 },
+      "charge": { "enwh": 250 },
+      "discharge": { "enwh": 0 }
+    }
+  ]
+}

@@ -8,7 +8,10 @@ import {
 } from '@/lib/server/adapter-flows';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/energy/alerts' });
 
 const NoQuerySchema = z.object({}).strict();
 
@@ -22,6 +25,12 @@ export async function GET(req: NextRequest) {
   const rateLimitError = checkReadRateLimit(req, result.context.user.id);
   if (rateLimitError) return rateLimitError;
   const { context } = result;
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: context.user.id,
+  });
+  reqLog.info('alerts request');
 
   const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
@@ -90,5 +99,7 @@ export async function GET(req: NextRequest) {
     evCount: context.evConfigs.length,
   });
 
+  const active = alerts.filter((a) => a.status === 'active').length;
+  reqLog.info('alerts response sent', { total: alerts.length, active });
   return NextResponse.json({ alerts });
 }

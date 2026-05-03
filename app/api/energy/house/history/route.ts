@@ -5,7 +5,10 @@ import { createAdapter } from '@/lib/adapters/factory';
 import { pickHouseDevice } from '@/lib/server/system-devices';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/energy/house/history' });
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +38,12 @@ export async function GET(req: NextRequest) {
   const qr = validateQuery(RangeQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
   const range = (qr.data as { range?: string }).range ?? '24h';
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: context.user.id,
+  });
+  reqLog.info('house/history request', { range });
   const hours = rangeToHours(range);
 
   const now = new Date();
@@ -97,5 +106,6 @@ export async function GET(req: NextRequest) {
     energy_kwh: Math.round(pt.value * 100) / 100,
   }));
 
+  reqLog.info('house/history response sent', { range, point_count: points.length });
   return NextResponse.json({ range, points, has_house: true });
 }

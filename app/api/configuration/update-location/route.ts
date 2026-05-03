@@ -3,7 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { checkWriteRateLimit } from '@/lib/api/rate-limit';
 import { validateBody, parseBody, getClientIp } from '@/lib/api/validate';
 import { recordAuditEvent } from '@/lib/audit/log';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/configuration/update-location' });
 
 const UpdateLocationSchema = z.object({
   streetAddress: z.string().min(1).max(200),
@@ -19,6 +22,11 @@ export async function POST(req: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: user.id,
+  });
 
   const rateLimitError = checkWriteRateLimit(req, user.id);
   if (rateLimitError) return rateLimitError;
@@ -70,7 +78,7 @@ export async function POST(req: NextRequest) {
       zoneKey = zoneData.zone;
     }
   } catch (error) {
-    console.error('Error getting zone key:', error);
+    reqLog.error('Error getting zone key', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: 'Failed to get energy zone' }, { status: 500 });
   }
 
@@ -84,7 +92,7 @@ export async function POST(req: NextRequest) {
     });
 
   if (updateError) {
-    console.error('Error updating profile:', updateError);
+    reqLog.error('Error updating profile', { error: updateError.message });
     return NextResponse.json({ error: 'Failed to save location to profile' }, { status: 500 });
   }
 

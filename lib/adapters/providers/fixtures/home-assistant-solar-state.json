@@ -1,0 +1,12 @@
+{
+  "entity_id": "sensor.solar_power",
+  "state": "3750.5",
+  "attributes": {
+    "unit_of_measurement": "W",
+    "friendly_name": "Solar Power",
+    "device_class": "power",
+    "state_class": "measurement"
+  },
+  "last_changed": "2024-06-15T14:30:00.000Z",
+  "last_updated": "2024-06-15T14:30:00.000Z"
+}

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { ProviderType } from '@/lib/adapters/types';
 import { encryptConnectionConfig } from '@/lib/crypto/connection-config';
 import { checkWriteRateLimit } from '@/lib/api/rate-limit';
 import { validateBody, validateQuery, validateParams, parseBody, getClientIp } from '@/lib/api/validate';
 import { recordAuditEvent } from '@/lib/audit/log';
+import { createLogger } from '@/lib/logger';
+import { reportError } from '@/lib/reporter';
 import { z } from 'zod';
 
 const VALID_PROVIDER_TYPES: ProviderType[] = [
@@ -35,7 +38,10 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();  
+  const hdrs = await headers();
+  const log = createLogger({ route: '/api/configuration/devices/[id]', request_id: hdrs.get('x-request-id') ?? undefined });
+
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -126,7 +132,7 @@ export async function PUT(
       .eq('user_id', user.id);
 
     if (deviceError) {
-      console.error('Error updating device:', deviceError);
+      log.error('Error updating device', { error: deviceError.message, user_id: user.id, device_id: deviceId });
       return NextResponse.json({ error: 'Failed to update device' }, { status: 500 });
     }
 
@@ -174,7 +180,7 @@ export async function PUT(
     }
 
     if (configError) {
-      console.error('Error updating device config:', configError);
+      log.error('Error updating device config', { error: configError.message, user_id: user.id, device_id: deviceId });
       return NextResponse.json({ error: 'Failed to update device configuration' }, { status: 500 });
     }
 
@@ -214,7 +220,8 @@ export async function PUT(
     });
 
   } catch (error) {
-    console.error('Error updating device:', error);
+    log.error('Unexpected error updating device', { error: error instanceof Error ? error.message : String(error), user_id: user.id, device_id: deviceId });
+    reportError(error, { route: '/api/configuration/devices/[id]', userId: user.id });
     return NextResponse.json({ error: 'Failed to update device' }, { status: 500 });
   }
 }
@@ -223,7 +230,10 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const supabase = await createClient();  
+  const hdrs = await headers();
+  const log = createLogger({ route: '/api/configuration/devices/[id]', request_id: hdrs.get('x-request-id') ?? undefined });
+
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -262,7 +272,7 @@ export async function DELETE(
       .eq('user_id', user.id);
 
     if (updateError) {
-      console.error('Error deactivating device:', updateError);
+      log.error('Error deactivating device', { error: updateError.message, user_id: user.id, device_id: deviceId });
       return NextResponse.json({ error: 'Failed to deactivate device' }, { status: 500 });
     }
 
@@ -279,7 +289,8 @@ export async function DELETE(
     });
 
   } catch (error) {
-    console.error('Error deactivating device:', error);
+    log.error('Unexpected error deactivating device', { error: error instanceof Error ? error.message : String(error), user_id: user.id, device_id: deviceId });
+    reportError(error, { route: '/api/configuration/devices/[id]', userId: user.id });
     return NextResponse.json({ error: 'Failed to deactivate device' }, { status: 500 });
   }
 }

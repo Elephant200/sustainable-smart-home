@@ -37,6 +37,9 @@ import {
   ConnectionSchema,
   hasStoredCredentials,
 } from '../types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ provider: 'tesla' });
 
 interface TeslaConnectionConfig {
   access_token?: string;
@@ -162,9 +165,7 @@ export class TeslaAdapter implements DeviceAdapter {
    */
   private unavailableStatus(reason: string): DeviceStatus {
     if (reason)
-      console.warn(
-        `[tesla] ${this.device.name}: live data unavailable — ${reason}`
-      );
+      log.warn('live data unavailable', { device_id: this.device.id, device_name: this.device.name, reason });
     return {
       deviceId: this.device.id,
       providerType: 'tesla',
@@ -232,11 +233,7 @@ export class TeslaAdapter implements DeviceAdapter {
       try {
         await this.persister(newCfg as Record<string, unknown>);
       } catch (err) {
-        console.warn(
-          `[tesla] ${this.device.name}: failed to persist rotated tokens — ${
-            err instanceof Error ? err.message : 'unknown'
-          }`
-        );
+        log.warn('failed to persist rotated tokens', { device_id: this.device.id, error: err instanceof Error ? err.message : 'unknown' });
       }
     }
     return tokens.access_token;
@@ -475,9 +472,7 @@ export class TeslaAdapter implements DeviceAdapter {
 
       const res = await this.tFetch(url);
       if (!res.ok) {
-        console.warn(
-          `[tesla] ${this.device.name}: history HTTP ${res.status}; returning empty`
-        );
+        log.warn('history HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
         return [];
       }
       const json = (await res.json()) as {
@@ -491,11 +486,7 @@ export class TeslaAdapter implements DeviceAdapter {
         unit,
       }));
     } catch (err) {
-      console.warn(
-        `[tesla] ${this.device.name}: history fetch failed — ${
-          err instanceof Error ? err.message : 'unknown'
-        }; returning empty`
-      );
+      log.warn('history fetch failed', { device_id: this.device.id, device_name: this.device.name, error: err instanceof Error ? err.message : 'unknown' });
       return [];
     }
   }
@@ -540,9 +531,7 @@ export class TeslaAdapter implements DeviceAdapter {
     // charging data is unavailable until they add their VIN.
     const vin = this.inMemoryConfig.vin;
     if (!vin) {
-      console.warn(
-        `[tesla] ${this.device.name}: VIN not set in connection_config — charging history endpoint requires VIN, not vehicle_id; returning empty`
-      );
+      log.warn('VIN not set — charging history requires VIN, not vehicle_id', { device_id: this.device.id, device_name: this.device.name });
       return [];
     }
 
@@ -578,17 +567,11 @@ export class TeslaAdapter implements DeviceAdapter {
           `/api/1/dx/vehicles/charging/history?${params.toString()}`
         );
       } catch (err) {
-        console.warn(
-          `[tesla] ${this.device.name}: charging history fetch failed — ${
-            err instanceof Error ? err.message : 'unknown'
-          }`
-        );
+        log.warn('charging history fetch failed', { device_id: this.device.id, device_name: this.device.name, error: err instanceof Error ? err.message : 'unknown' });
         return [];
       }
       if (!res.ok) {
-        console.warn(
-          `[tesla] ${this.device.name}: charging history HTTP ${res.status}; returning ${collected.length} prior sessions`
-        );
+        log.warn('charging history HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status, collected: collected.length });
         break;
       }
       const json = (await res.json()) as TeslaChargingHistoryResponse;

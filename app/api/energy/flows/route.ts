@@ -4,7 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { solveFlowsHistoryFromAdapters } from '@/lib/server/adapter-flows';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/energy/flows' });
 
 export const dynamic = 'force-dynamic';
 
@@ -133,8 +136,8 @@ async function readPersistedFlows(
         }>, error: null }),
   ]);
 
-  if (flowsResult.error) console.warn('[flows] energy_flows query error:', flowsResult.error.message);
-  if (houseResult.error) console.warn('[flows] house_load query error:', houseResult.error.message);
+  if (flowsResult.error) log.warn('energy_flows query error', { error: flowsResult.error.message });
+  if (houseResult.error) log.warn('house_load query error', { error: houseResult.error.message });
 
   const allTimestamps = new Set<string>();
   for (const row of flowsResult.data ?? []) allTimestamps.add(row.timestamp);
@@ -271,6 +274,11 @@ export async function GET(req: NextRequest) {
   if (result.error)
     return NextResponse.json(result.error.body, { status: result.error.status });
   const { context } = result;
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: context.user.id,
+  });
 
   const rateLimitError = checkReadRateLimit(req, context.user.id);
   if (rateLimitError) return rateLimitError;

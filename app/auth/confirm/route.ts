@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
+import { createLogger } from "@/lib/logger";
+
+const log = createLogger({ route: '/auth/confirm' });
 
 async function createDefaultProfile(userId: string) {
   const supabase = await createClient();
@@ -14,7 +17,7 @@ async function createDefaultProfile(userId: string) {
     .single();
   
   if (existingProfile) {
-    console.log("Profile already exists for user:", userId);
+    log.info("Profile already exists for user", { user_id: userId });
     return;
   }
   
@@ -30,14 +33,15 @@ async function createDefaultProfile(userId: string) {
     });
     
   if (profileError) {
-    console.error("Error creating default profile:", profileError);
+    log.error("Error creating default profile", { user_id: userId, error: profileError.message });
     throw profileError;
   }
   
-  console.log("Default profile created for user:", userId);
+  log.info("Default profile created for user", { user_id: userId });
 }
 
 export async function GET(request: NextRequest) {
+  const reqLog = log.child({ request_id: request.headers.get('x-request-id') ?? undefined });
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
@@ -57,7 +61,7 @@ export async function GET(request: NextRequest) {
         // Create default profile for new user
         await createDefaultProfile(data.user.id);
       } catch (profileError) {
-        console.error("Failed to create default profile:", profileError);
+        reqLog.error("Failed to create default profile", { user_id: data.user.id, error: profileError instanceof Error ? profileError.message : String(profileError) });
         // Don't fail the verification because of profile creation error
         // The user can set up their profile later in settings
       }

@@ -1,0 +1,32 @@
+[
+  [
+    {
+      "entity_id": "sensor.solar_power",
+      "state": "0",
+      "attributes": { "unit_of_measurement": "W" },
+      "last_changed": "2024-06-15T00:00:00.000Z",
+      "last_updated": "2024-06-15T00:00:00.000Z"
+    },
+    {
+      "entity_id": "sensor.solar_power",
+      "state": "250",
+      "attributes": { "unit_of_measurement": "W" },
+      "last_changed": "2024-06-15T06:00:00.000Z",
+      "last_updated": "2024-06-15T06:00:00.000Z"
+    },
+    {
+      "entity_id": "sensor.solar_power",
+      "state": "3750",
+      "attributes": { "unit_of_measurement": "W" },
+      "last_changed": "2024-06-15T12:00:00.000Z",
+      "last_updated": "2024-06-15T12:00:00.000Z"
+    },
+    {
+      "entity_id": "sensor.solar_power",
+      "state": "1200",
+      "attributes": { "unit_of_measurement": "W" },
+      "last_changed": "2024-06-15T18:00:00.000Z",
+      "last_updated": "2024-06-15T18:00:00.000Z"
+    }
+  ]
+]

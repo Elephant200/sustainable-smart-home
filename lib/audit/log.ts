@@ -1,4 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ route: 'lib/audit/log' });
 
 export type AuditAction =
   | 'device.create'
@@ -42,6 +45,6 @@ export async function recordAuditEvent(params: AuditEventParams): Promise<void> 
       metadata: params.metadata ?? {},
     });
   } catch (err) {
-    console.error('[audit] Failed to record audit event:', err);
+    log.error('Failed to record audit event', { error: err instanceof Error ? err.message : String(err) });
   }
 }

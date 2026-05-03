@@ -1,8 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createLogger } from "@/lib/logger";
 
-export async function POST() {
+const log = createLogger({ route: '/auth/delete-account' });
+
+export async function POST(req: NextRequest) {
+  const reqLog = log.child({ request_id: req.headers.get('x-request-id') ?? undefined });
   try {
     const supabase = await createClient();
     
@@ -16,9 +20,11 @@ export async function POST() {
       );
     }
 
+    const userReqLog = reqLog.child({ user_id: user.id });
+
     // Check if service role key is configured
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error("SUPABASE_SERVICE_ROLE_KEY not configured");
+      userReqLog.error("SUPABASE_SERVICE_ROLE_KEY not configured");
       throw new Error("SUPABASE_SERVICE_ROLE_KEY not configured");
     }
 
@@ -37,7 +43,7 @@ export async function POST() {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Delete account error:", error);
+    reqLog.error("Delete account error", { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: "Failed to delete account" },
       { status: 500 }

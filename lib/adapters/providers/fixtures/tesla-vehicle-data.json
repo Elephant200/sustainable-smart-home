@@ -1,0 +1,10 @@
+{
+  "response": {
+    "charge_state": {
+      "battery_level": 68,
+      "charge_rate": 25.0,
+      "charger_power": 11,
+      "charging_state": "Charging"
+    }
+  }
+}

@@ -16,7 +16,10 @@ import {
 } from '@/lib/simulation';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/energy/ev' });
 
 const NoQuerySchema = z.object({}).strict();
 
@@ -41,6 +44,12 @@ export async function GET(req: NextRequest) {
 
   const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: context.user.id,
+  });
+  reqLog.info('ev request');
 
   const now = new Date();
   const startToday = new Date(now);

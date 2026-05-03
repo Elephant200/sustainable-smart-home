@@ -1,0 +1,20 @@
+{
+  "deviceListUsages": {
+    "instant": "2024-06-15T14:30:00Z",
+    "scale": "1MIN",
+    "unit": "KilowattHours",
+    "devices": [
+      {
+        "deviceGid": 12345,
+        "channelUsages": [
+          {
+            "name": "Main",
+            "usage": 0.058,
+            "deviceGid": 12345,
+            "channelNum": "1,2,3"
+          }
+        ]
+      }
+    ]
+  }
+}

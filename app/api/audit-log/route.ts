@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
 
 const AuditLogQuerySchema = z.object({
@@ -9,6 +11,9 @@ const AuditLogQuerySchema = z.object({
 }).strict();
 
 export async function GET(req: NextRequest) {
+  const hdrs = await headers();
+  const log = createLogger({ route: '/api/audit-log', request_id: hdrs.get('x-request-id') ?? undefined });
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -29,7 +34,7 @@ export async function GET(req: NextRequest) {
     .limit(qr.data.limit ?? 20);
 
   if (error) {
-    console.error('[audit-log] fetch error:', error);
+    log.error('audit_logs fetch error', { error: error.message, user_id: user.id });
     return NextResponse.json({ error: 'Failed to fetch activity' }, { status: 500 });
   }
 

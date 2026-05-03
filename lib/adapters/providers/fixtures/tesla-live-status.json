@@ -1,0 +1,12 @@
+{
+  "response": {
+    "solar_power": 4200,
+    "battery_power": -1500,
+    "load_power": 2100,
+    "grid_power": 600,
+    "percentage_charged": 72.5,
+    "energy_left": 9.425,
+    "total_pack_energy": 13.5,
+    "timestamp": "2024-06-15T14:30:00Z"
+  }
+}

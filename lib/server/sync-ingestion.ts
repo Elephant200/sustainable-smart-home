@@ -31,7 +31,10 @@
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { recordAuditEvent } from '@/lib/audit/log';
+import { createLogger } from '@/lib/logger';
 import type { DeviceRecord, DeviceStatus, HistoricalPoint } from '@/lib/adapters/types';
+
+const log = createLogger({ route: 'lib/server/sync-ingestion' });
 
 // ---------------------------------------------------------------------------
 // Internal validation guards (equivalent to request-layer Zod schemas but
@@ -51,11 +54,11 @@ function validateIngestedValue(
   max: number
 ): value is number {
   if (value == null || !isFinite(value)) {
-    console.warn(`[sync] validation: ${label} is null/non-finite (${value}), skipping write`);
+    log.warn('ingestion validation: null or non-finite value', { label, value });
     return false;
   }
   if (value < min || value > max) {
-    console.warn(`[sync] validation: ${label}=${value} is outside [${min}, ${max}], skipping write`);
+    log.warn('ingestion validation: value out of range', { label, value, min, max });
     return false;
   }
   return true;
@@ -106,7 +109,7 @@ export async function updateSyncState(
         { onConflict: 'device_id' }
       );
     if (error) {
-      console.error(`[sync] Failed to update sync state for device ${deviceId}:`, error);
+      log.error('Failed to update device_sync_state', { device_id: deviceId, error: error.message });
     }
     return;
   }
@@ -139,7 +142,7 @@ export async function updateSyncState(
     .upsert(row, { onConflict: 'device_id' });
 
   if (error) {
-    console.error(`[sync] Failed to update sync state for device ${deviceId}:`, error);
+    log.error('Failed to update device_sync_state', { device_id: deviceId, error: error.message });
   }
 }
 
@@ -180,7 +183,7 @@ export async function ingestBatteryStatus(
   );
 
   if (error) {
-    console.warn(`[sync] battery_state upsert for device ${device.id}:`, error.message);
+    log.warn('battery_state upsert error', { device_id: device.id, error: error.message });
     return false;
   }
 
@@ -254,7 +257,7 @@ export async function ingestBatteryHistory(
       .from('battery_state')
       .upsert(row, { onConflict: 'device_id,timestamp' });
     if (error) {
-      console.warn(`[sync] battery_state history upsert for ${device.id} at ${row.timestamp}:`, error.message);
+      log.warn('battery_state history upsert error', { device_id: device.id, ts: row.timestamp, error: error.message });
     }
   }
 }
@@ -312,7 +315,7 @@ export async function ingestHouseStatus(
   });
 
   if (error) {
-    console.warn(`[sync] house_load insert for device ${device.id}:`, error.message);
+    log.warn('house_load insert error', { device_id: device.id, error: error.message });
     return false;
   }
   await recordAuditEvent({
@@ -384,7 +387,7 @@ export async function ingestEvStatus(
   });
 
   if (error) {
-    console.warn(`[sync] ev_charge_sessions insert for device ${device.id}:`, error.message);
+    log.warn('ev_charge_sessions insert error', { device_id: device.id, error: error.message });
     return false;
   }
   await recordAuditEvent({
@@ -440,7 +443,7 @@ export async function ingestSolarStatus(
   });
 
   if (error) {
-    console.warn(`[sync] energy_flows solar status for device ${device.id}:`, error.message);
+    log.warn('energy_flows solar status upsert error', { device_id: device.id, error: error.message });
     return false;
   }
 
@@ -495,7 +498,7 @@ export async function ingestGridStatus(
   });
 
   if (error) {
-    console.warn(`[sync] energy_flows grid status for device ${device.id}:`, error.message);
+    log.warn('energy_flows grid status upsert error', { device_id: device.id, error: error.message });
     return false;
   }
 
@@ -556,7 +559,7 @@ export async function ingestSolarHistory(
 
   const { error } = await supabase.from('energy_flows').insert(rows);
   if (error) {
-    console.warn(`[sync] energy_flows upsert for device ${device.id}:`, error.message);
+    log.warn('energy_flows upsert error', { device_id: device.id, error: error.message });
   }
 }
 
@@ -605,7 +608,7 @@ export async function ingestGridHistory(
 
   const { error } = await supabase.from('energy_flows').insert(rows);
   if (error) {
-    console.warn(`[sync] energy_flows grid history for device ${device.id}:`, error.message);
+    log.warn('energy_flows grid history error', { device_id: device.id, error: error.message });
   }
 }
 

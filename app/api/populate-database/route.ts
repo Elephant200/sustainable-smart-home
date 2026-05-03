@@ -3,7 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { populateUserData, clearUserData } from '@/lib/data-generator/populate-database';
 import { validateQuery } from '@/lib/api/validate';
 import { checkWriteRateLimit } from '@/lib/api/rate-limit';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/populate-database' });
 
 const PopulateQuerySchema = z.object({
   action: z.enum(['populate', 'clear', 'count', 'status']).default('status'),
@@ -11,6 +14,8 @@ const PopulateQuerySchema = z.object({
 }).strict();
 
 export async function GET(request: NextRequest) {
+  const reqLog = log.child({ request_id: request.headers.get('x-request-id') ?? undefined });
+
   if (process.env.NODE_ENV === 'production') {
     return NextResponse.json(
       { success: false, error: 'Not available in production' },
@@ -28,6 +33,8 @@ export async function GET(request: NextRequest) {
         error: 'Unauthorized' 
       }, { status: 401 });
     }
+
+    const userReqLog = reqLog.child({ user_id: user.id });
 
     const rateLimitError = checkWriteRateLimit(request, user.id);
     if (rateLimitError) return rateLimitError;
@@ -95,7 +102,7 @@ export async function GET(request: NextRequest) {
     }
     
   } catch (error) {
-    console.error('Error in populate-database API:', error);
+    reqLog.error('Error in populate-database API', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

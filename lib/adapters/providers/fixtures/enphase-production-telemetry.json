@@ -1,0 +1,10 @@
+{
+  "system_id": 67890,
+  "granularity": "15mins",
+  "total_devices": 12,
+  "intervals": [
+    { "end_at": 1718460000, "powr": 3200, "enwh": 800 },
+    { "end_at": 1718460900, "powr": 3500, "enwh": 875 },
+    { "end_at": 1718461800, "powr": 3750, "enwh": 937 }
+  ]
+}

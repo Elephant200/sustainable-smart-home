@@ -32,6 +32,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ route: '/api/configuration/devices/health' });
 
 const STALE_THRESHOLD_SEC = parseInt(
   process.env.DEVICE_STALE_THRESHOLD_SEC ?? '3600',
@@ -80,6 +83,12 @@ export async function GET(req: NextRequest) {
 
   const rateLimitError = checkReadRateLimit(req, user.id);
   if (rateLimitError) return rateLimitError;
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: user.id,
+  });
+  reqLog.info('devices/health request');
 
   const { data: devices, error: devicesError } = await supabase
     .from('devices')
@@ -136,5 +145,7 @@ export async function GET(req: NextRequest) {
     };
   });
 
+  const disconnected = result.filter((d) => d.status === 'disconnected' || d.status === 'stale').length;
+  reqLog.info('devices/health response sent', { total: result.length, disconnected });
   return NextResponse.json({ devices: result });
 }

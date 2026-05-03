@@ -8,7 +8,10 @@ import {
 } from '@/lib/server/adapter-flows';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/energy/solar/panels' });
 
 const NoQuerySchema = z.object({}).strict();
 
@@ -22,6 +25,12 @@ export async function GET(req: NextRequest) {
 
   const rateLimitError = checkReadRateLimit(req, context.user.id);
   if (rateLimitError) return rateLimitError;
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: context.user.id,
+  });
+  reqLog.info('solar/panels request');
 
   const qr = validateQuery(NoQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
@@ -109,5 +118,6 @@ export async function GET(req: NextRequest) {
     battery?.capacity_kwh ?? 0
   );
 
+  reqLog.info('solar/panels response sent', { array_count: arrays.length });
   return NextResponse.json({ arrays, summary });
 }

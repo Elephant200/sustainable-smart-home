@@ -96,6 +96,13 @@
 - **Tailwind CSS IntelliSense** - Enhanced development experience
 - **TypeScript strict mode** - Maximum type safety
 
+### **Observability & Testing**
+- **Structured JSON logging** (`lib/logger.ts`) — per-request context, sensitive-field scrubbing, child loggers
+- **Error reporting** (`lib/reporter.ts`) — Sentry-compatible envelope sender; no-op when `SENTRY_DSN` is unset
+- **Health endpoint** (`GET /api/health`) — DB reachability, latency, per-provider summary; returns 200/503
+- **Unit tests** — Node.js built-in test runner (`tsx --test`), 37 tests across rate-limiter, validation, audit-log, and all five provider adapters
+- **End-to-end tests** — Playwright with Chromium + Firefox covering public pages, auth flows, user journeys, and API contracts
+
 ---
 
 ## 📋 **Prerequisites**

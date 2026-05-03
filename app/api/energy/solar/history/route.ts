@@ -4,7 +4,10 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdapter } from '@/lib/adapters/factory';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
+import { createLogger } from '@/lib/logger';
 import { z } from 'zod';
+
+const log = createLogger({ route: '/api/energy/solar/history' });
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +37,12 @@ export async function GET(req: NextRequest) {
   const qr = validateQuery(RangeQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
   const range = (qr.data as { range?: string }).range ?? '24h';
+
+  const reqLog = log.child({
+    request_id: req.headers.get('x-request-id') ?? undefined,
+    user_id: context.user.id,
+  });
+  reqLog.info('solar/history request', { range });
   const hours = rangeToHours(range);
 
   const now = new Date();
@@ -123,5 +132,6 @@ export async function GET(req: NextRequest) {
     }))
     .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
 
+  reqLog.info('solar/history response sent', { range, point_count: points.length });
   return NextResponse.json({ range, points });
 }

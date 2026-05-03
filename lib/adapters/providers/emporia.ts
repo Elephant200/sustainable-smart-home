@@ -33,6 +33,9 @@ import {
   ConnectionSchema,
   hasStoredCredentials,
 } from '../types';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger({ provider: 'emporia' });
 
 interface EmporiaConnectionConfig {
   username?: string;
@@ -97,9 +100,7 @@ export class EmporiaAdapter implements DeviceAdapter {
    */
   private unavailableStatus(reason: string): DeviceStatus {
     if (reason)
-      console.warn(
-        `[emporia] ${this.device.name}: live data unavailable — ${reason}`
-      );
+      log.warn('live data unavailable', { device_id: this.device.id, device_name: this.device.name, reason });
     return {
       deviceId: this.device.id,
       providerType: 'emporia',
@@ -156,11 +157,7 @@ export class EmporiaAdapter implements DeviceAdapter {
       try {
         await this.persister(newCfg as Record<string, unknown>);
       } catch (err) {
-        console.warn(
-          `[emporia] ${this.device.name}: failed to persist id_token — ${
-            err instanceof Error ? err.message : 'unknown'
-          }`
-        );
+        log.warn('failed to persist id_token', { device_id: this.device.id, error: err instanceof Error ? err.message : 'unknown' });
       }
     }
     return idToken;
@@ -278,9 +275,7 @@ export class EmporiaAdapter implements DeviceAdapter {
         `&scale=1H&unit=KilowattHours&energyDirection=CONSUMED`;
       const res = await this.eFetch(path);
       if (!res.ok) {
-        console.warn(
-          `[emporia] ${this.device.name}: history HTTP ${res.status}; returning empty`
-        );
+        log.warn('history HTTP error', { device_id: this.device.id, device_name: this.device.name, status: res.status });
         return [];
       }
       const json = (await res.json()) as {
@@ -300,11 +295,7 @@ export class EmporiaAdapter implements DeviceAdapter {
         }))
         .filter((pt) => pt.timestamp <= range.endDate);
     } catch (err) {
-      console.warn(
-        `[emporia] ${this.device.name}: history fetch failed — ${
-          err instanceof Error ? err.message : 'unknown'
-        }; returning empty`
-      );
+      log.warn('history fetch failed', { device_id: this.device.id, device_name: this.device.name, error: err instanceof Error ? err.message : 'unknown' });
       return [];
     }
   }

@@ -164,3 +164,54 @@ VERCEL_URL=                        # Set automatically by Vercel; used for metad
 ```
 
 **Dev server**: runs on port 5000 (`next dev --turbopack --port 5000`).
+
+---
+
+## Real-Device Connectivity Foundation (Task #18)
+
+### OAuth Handshake Routes
+
+Two provider-agnostic OAuth routes handle the authorization flow:
+- `app/api/auth/oauth/[provider]/start/route.ts` — Generates PKCE challenge (Tesla) or state token (Enphase), stores them as `HttpOnly` cookies (10-min TTL), and redirects to the provider's authorization URL.
+- `app/api/auth/oauth/[provider]/callback/route.ts` — Validates state cookie, exchanges code for tokens (with PKCE verifier for Tesla; HTTP Basic auth for Enphase), encrypts tokens via `CONNECTION_CONFIG_SECRET`, and persists them to `devices.connection_config`.
+
+Provider configs live in `lib/server/oauth-providers.ts` (Tesla PKCE + Enphase configs, `generatePkce`, `generateState`).
+
+### Background Sync Cron
+
+`app/api/cron/sync-devices/route.ts` — Protected by `CRON_SECRET` (Bearer token or query param). Iterates all devices with live providers, calls each adapter's `getStatus()`, persists results into the relevant tables via `lib/server/sync-ingestion.ts`, and updates `device_sync_state` with success/failure info.
+
+Polling cadences per provider are defined in `lib/server/polling-config.ts`.
+
+### device_sync_state Table
+
+Migration `supabase/migrations/004_device_sync_state.sql` adds a `device_sync_state` table:
+- `device_id` (FK → devices, PK), `user_id` (FK → auth.users, indexed)
+- `last_sync_at`, `last_success_at`, `last_error_at`, `last_error_message`, `consecutive_failures`, `rate_limited_until`, `updated_at`
+- RLS: users can only SELECT their own rows; cron writes via service role (bypasses RLS).
+
+### Health API
+
+`app/api/configuration/devices/health/route.ts` — Authenticated GET that returns all `device_sync_state` rows for the current user, joined with device name/type. Returns `{ devices: DeviceHealthSummary[] }`.
+
+### Settings — Connection Health Section
+
+- `components/settings/device-health-card.tsx` — Per-device status pill (ok/degraded/error/never synced), last-sync timestamp, error message, and a "Reconnect" button that triggers the OAuth start route for OAuth providers.
+- Added "Connection Health" section (`#device-health`) to `app/app/settings/page.tsx`, below Device Configuration.
+- Added "Connection Health" nav item to `components/settings/settings-navigation.tsx`.
+
+### Dashboard — Disconnected Banner
+
+- `components/dashboard/disconnected-banner.tsx` — Dismissible alert bar rendered at the top of `app/app/page.tsx`. Polls `/api/configuration/devices/health` on mount and shows a warning if any device is in `error` or `degraded` state (or has never synced). Links to Settings → Connection Health for remediation.
+
+### Field Mapping Documentation
+
+`lib/adapters/providers/README.md` documents the canonical field mapping for each provider (Tesla, Enphase, SolarEdge, Home Assistant, Emporia) and includes a step-by-step "How to add a new provider" guide.
+
+### New Environment Variables (optional)
+```
+CRON_SECRET=      # Shared secret to authenticate calls to /api/cron/sync-devices
+TESLA_CLIENT_ID=  # Tesla Fleet API OAuth app client ID (also usable per-device)
+ENPHASE_CLIENT_ID=     # Enphase Enlighten OAuth app client ID
+ENPHASE_CLIENT_SECRET= # Enphase Enlighten OAuth app client secret
+```

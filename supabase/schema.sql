@@ -319,4 +319,40 @@ ALTER TABLE "public"."house_load" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
 
+-- device_sync_state: added via migration 004_device_sync_state.sql
+-- Records per-device sync health for the background cron.
+CREATE TABLE IF NOT EXISTS "public"."device_sync_state" (
+    "device_id"             uuid NOT NULL,
+    "user_id"               uuid NOT NULL,
+    "last_sync_at"          timestamp with time zone,
+    "last_success_at"       timestamp with time zone,
+    "last_error_at"         timestamp with time zone,
+    "last_error_message"    text,
+    "consecutive_failures"  integer DEFAULT 0 NOT NULL,
+    "rate_limited_until"    timestamp with time zone,
+    "updated_at"            timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "device_sync_state_pkey" PRIMARY KEY ("device_id"),
+    CONSTRAINT "device_sync_state_device_id_fkey"
+        FOREIGN KEY ("device_id") REFERENCES "public"."devices"("id") ON DELETE CASCADE,
+    CONSTRAINT "device_sync_state_user_id_fkey"
+        FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE
+);
+
+ALTER TABLE "public"."device_sync_state" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."device_sync_state" IS
+    'Per-device sync health: last attempt, last success, and failure streak. '
+    'Written by the background sync cron; read by the settings health card '
+    'and the dashboard disconnection banner.';
+
+CREATE INDEX IF NOT EXISTS "idx_device_sync_state_user"
+    ON "public"."device_sync_state" ("user_id");
+
+ALTER TABLE "public"."device_sync_state" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own device sync state"
+    ON "public"."device_sync_state"
+    FOR SELECT
+    USING (user_id = auth.uid());
+
 ALTER TABLE "public"."solar_config" ENABLE ROW LEVEL SECURITY;

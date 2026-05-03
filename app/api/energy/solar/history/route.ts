@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
+import { createClient } from '@/lib/supabase/server';
 import { createAdapter } from '@/lib/adapters/factory';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   const qr = validateQuery(RangeQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
-  const range = qr.data.range ?? '24h';
+  const range = (qr.data as { range?: string }).range ?? '24h';
   const hours = rangeToHours(range);
 
   const now = new Date();
@@ -40,27 +41,78 @@ export async function GET(req: NextRequest) {
   start.setMinutes(0, 0, 0);
 
   const solarDevices = context.rawDevices.filter((d) => d.type === 'solar_array');
+  const liveDevices = solarDevices.filter((d) => d.provider_type !== 'simulated');
+  const simDevices = solarDevices.filter((d) => d.provider_type === 'simulated');
+  const liveDeviceIds = liveDevices.map((d) => d.id);
 
-  // Per-device history through the adapter layer; the route only sums
-  // aligned hourly buckets.
-  const perDeviceSeries = await Promise.all(
-    solarDevices.map((d) =>
-      createAdapter(d, {
-        solar: context.solarConfigs,
-        persistConfig: context.persistConnectionConfig,
-      }).getHistory({
-        metric: 'energy_kwh',
-        startDate: start,
-        endDate: now,
-      })
-    )
-  );
-
+  // Per-hour energy bucket — all contributions (live persisted + simulated adapter) accumulate here.
   const bucket = new Map<string, number>();
-  for (const series of perDeviceSeries) {
-    for (const pt of series) {
-      const key = pt.timestamp.toISOString();
-      bucket.set(key, (bucket.get(key) ?? 0) + pt.value);
+
+  // Live devices: prefer persisted energy_flows rows written by the background cron.
+  // Mixed live+simulated fleet: always merge simulated adapter output on top, so that
+  // explicitly-configured simulated arrays are never dropped once live data exists.
+  if (liveDeviceIds.length > 0) {
+    const supabase = await createClient();
+    const { data: check } = await supabase
+      .from('energy_flows')
+      .select('timestamp')
+      .in('source_device_id', liveDeviceIds)
+      .eq('source', 'solar')
+      .gte('timestamp', start.toISOString())
+      .eq('resolution', '1hr')
+      .limit(1)
+      .single();
+
+    if (check) {
+      // Cron data exists — read persisted live rows.
+      const { data: rows } = await supabase
+        .from('energy_flows')
+        .select('timestamp, energy_kwh')
+        .in('source_device_id', liveDeviceIds)
+        .eq('source', 'solar')
+        .gte('timestamp', start.toISOString())
+        .lte('timestamp', now.toISOString())
+        .eq('resolution', '1hr')
+        .order('timestamp', { ascending: true });
+
+      for (const row of rows ?? []) {
+        bucket.set(row.timestamp, (bucket.get(row.timestamp) ?? 0) + (row.energy_kwh ?? 0));
+      }
+    } else {
+      // No cron data yet — fall back to live adapter calls for live devices.
+      const liveSeriesArray = await Promise.all(
+        liveDevices.map((d) =>
+          createAdapter(d, {
+            solar: context.solarConfigs,
+            persistConfig: context.persistConnectionConfig,
+          }).getHistory({ metric: 'energy_kwh', startDate: start, endDate: now })
+        )
+      );
+      for (const series of liveSeriesArray) {
+        for (const pt of series) {
+          const key = pt.timestamp.toISOString();
+          bucket.set(key, (bucket.get(key) ?? 0) + pt.value);
+        }
+      }
+    }
+  }
+
+  // Simulated devices: always call adapter regardless of live data availability.
+  // The user explicitly added these devices — they must appear in the output.
+  if (simDevices.length > 0) {
+    const simSeriesArray = await Promise.all(
+      simDevices.map((d) =>
+        createAdapter(d, {
+          solar: context.solarConfigs,
+          persistConfig: context.persistConnectionConfig,
+        }).getHistory({ metric: 'energy_kwh', startDate: start, endDate: now })
+      )
+    );
+    for (const series of simSeriesArray) {
+      for (const pt of series) {
+        const key = pt.timestamp.toISOString();
+        bucket.set(key, (bucket.get(key) ?? 0) + pt.value);
+      }
     }
   }
 

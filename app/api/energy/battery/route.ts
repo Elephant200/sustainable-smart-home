@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext, findDeviceName } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters';
+import { createClient } from '@/lib/supabase/server';
 import { pickHouseDevice } from '@/lib/server/system-devices';
+import { getPollingConfig } from '@/lib/server/polling-config';
 import {
   timeToFullHours,
   RESERVE_FRACTION,
@@ -12,6 +14,7 @@ import {
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
 import { validateQuery } from '@/lib/api/validate';
 import { z } from 'zod';
+import type { ProviderType } from '@/lib/adapters/types';
 
 const NoQuerySchema = z.object({}).strict();
 
@@ -70,20 +73,94 @@ export async function GET(req: NextRequest) {
   const startToday = new Date(now);
   startToday.setHours(0, 0, 0, 0);
 
-  // Fan out to each battery via its adapter. The route consumes only the
-  // DeviceStatus / HistoricalPoint adapter contract — never simulation
-  // internals — so swapping a battery's provider_type to 'tesla' or 'enphase'
-  // requires no changes here.
+  // Load sync-state rows for all battery devices in one query so we can
+  // prefer persisted battery_state rows when the background cron has a
+  // recent successful sync — reducing live provider API calls and latency.
+  const liveBatteryIds = batteryDevices
+    .filter((d) => d.provider_type !== 'simulated')
+    .map((d) => d.id);
+
+  const syncStateByDevice = new Map<string, { lastSuccessAt: Date | null; isFresh: boolean }>();
+  if (liveBatteryIds.length > 0) {
+    const supabase = await createClient();
+    const { data: syncRows } = await supabase
+      .from('device_sync_state')
+      .select('device_id, last_success_at')
+      .in('device_id', liveBatteryIds);
+    for (const row of syncRows ?? []) {
+      const lastSuccessAt = row.last_success_at ? new Date(row.last_success_at) : null;
+      const providerType = batteryDevices.find((d) => d.id === row.device_id)?.provider_type as ProviderType | undefined;
+      const cfg = providerType ? getPollingConfig(providerType) : null;
+      const isFresh =
+        lastSuccessAt != null &&
+        cfg != null &&
+        (Date.now() - lastSuccessAt.getTime()) / 1000 <= cfg.minIntervalSec * 2;
+      syncStateByDevice.set(row.device_id, { lastSuccessAt, isFresh });
+    }
+  }
+
+  // Fan out to each battery via its adapter, or read from persisted
+  // battery_state rows when a fresh background sync is available.
   const perDevice = await Promise.all(
     batteryDevices.map(async (device) => {
-      const adapter = createAdapter(device, {
+      const adapterOpts = {
         solar: context.solarConfigs,
         ev: context.evConfigs,
         battery: context.batteryConfigs.find((b) => b.id === device.id) ?? null,
         persistConfig: context.persistConnectionConfig,
-      });
-      const [status, socSeries, powerSeries] = await Promise.all([
-        adapter.getStatus(),
+      };
+      const adapter = createAdapter(device, adapterOpts);
+
+      // For live devices with a fresh persisted sync, read battery_state for
+      // current status rather than calling the provider API again.
+      // Two-layer freshness check:
+      //   1. device_sync_state.last_success_at is within 2× the polling window
+      //      (guards against sync_state being ahead of the actual persisted row,
+      //       e.g. when the ingestion write fails after updateSyncState succeeds).
+      //   2. The battery_state row's own timestamp is within the same window
+      //      (ensures we actually have a row from the recent sync, not a stale one).
+      const syncInfo = syncStateByDevice.get(device.id);
+      let status: Awaited<ReturnType<typeof adapter.getStatus>>;
+      if (syncInfo?.isFresh && device.provider_type !== 'simulated') {
+        const supabase = await createClient();
+        const { data: persistedState } = await supabase
+          .from('battery_state')
+          .select('soc_percent, soc_kwh, timestamp')
+          .eq('device_id', device.id)
+          .order('timestamp', { ascending: false })
+          .limit(1)
+          .single();
+        const cfg = context.batteryConfigs.find((b) => b.id === device.id);
+        const providerCfg = getPollingConfig(device.provider_type as ProviderType);
+        const rowFresh =
+          persistedState != null &&
+          (Date.now() - new Date(persistedState.timestamp).getTime()) / 1000 <=
+            providerCfg.minIntervalSec * 2;
+        if (rowFresh && persistedState) {
+          // batteryPowerKw is intentionally undefined — battery_state only stores
+          // SoC snapshots, not instantaneous power. The route's consumer already
+          // defaults powerKw to 0 when undefined (see `powerKw` below).
+          status = {
+            deviceId: device.id,
+            providerType: device.provider_type as ProviderType,
+            timestamp: new Date(persistedState.timestamp),
+            isLive: true,
+            batterySOCPercent: persistedState.soc_percent ?? 0,
+            batterySOCKwh: persistedState.soc_kwh ?? 0,
+            batteryPowerKw: undefined,
+            batteryCapacityKwh: cfg?.capacity_kwh,
+            batteryMaxFlowKw: cfg?.max_flow_kw,
+          };
+        } else {
+          status = await adapter.getStatus();
+        }
+      } else {
+        status = await adapter.getStatus();
+      }
+
+      // History always comes from the adapter (provider history is richer than
+      // our persisted battery_state snapshot rows which only track current SoC).
+      const [socSeries, powerSeries] = await Promise.all([
         adapter.getHistory({
           metric: 'soc_kwh',
           startDate: startToday,

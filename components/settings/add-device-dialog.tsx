@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, Loader2, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { CheckCircle, Loader2, ChevronDown, ChevronUp, Info, ExternalLink } from "lucide-react";
 import { getAllProviderSchemas } from "@/lib/adapters/factory";
 import { ProviderType, ConnectionSchema, ConnectionFieldSchema } from "@/lib/adapters/types";
+
+const OAUTH_PROVIDERS: ReadonlySet<ProviderType> = new Set(['tesla', 'enphase']);
 
 type DeviceType = 'solar_array' | 'battery' | 'ev' | 'grid' | 'house';
 
@@ -154,6 +156,8 @@ export function AddDeviceDialog({
     }
   };
 
+  const isOAuthProvider = OAUTH_PROVIDERS.has(selectedProvider);
+
   const handleSubmit = async () => {
     if (!isFormValid()) return;
     setStep('connecting');
@@ -171,6 +175,18 @@ export function AddDeviceDialog({
     }, 100);
   };
 
+  /**
+   * Save (or update) the device record, then for OAuth providers immediately
+   * redirect the browser into the OAuth authorization flow so the user
+   * can grant access without having to manually paste tokens.
+   *
+   * Flow:
+   *   1. POST /api/configuration/devices  → get back { id }
+   *   2. Redirect to /api/auth/oauth/[provider]/start?device_id=<id>
+   *
+   * The OAuth callback will write the tokens back to that device record
+   * and redirect the user to /settings when finished.
+   */
   const handleFinish = async () => {
     try {
       const isEditing = !!editingDevice;
@@ -194,6 +210,18 @@ export function AddDeviceDialog({
         const errorData = await response.json();
         console.error(`Failed to ${isEditing ? 'update' : 'add'} device:`, errorData.error);
         return;
+      }
+
+      // For OAuth providers, redirect into the authorization flow immediately
+      // after saving the device record so the user can grant access without
+      // having to manually paste access/refresh tokens.
+      if (isOAuthProvider && !isEditing) {
+        const data = await response.json();
+        const deviceId: string = data.id ?? data.device?.id;
+        if (deviceId) {
+          window.location.href = `/api/auth/oauth/${selectedProvider}/start?device_id=${deviceId}`;
+          return;
+        }
       }
 
       onDeviceAdded?.();
@@ -545,7 +573,12 @@ export function AddDeviceDialog({
           )}
           {step === 'connected' && (
             <Button onClick={handleFinish} className="mx-auto">
-              Finish
+              {isOAuthProvider && !editingDevice ? (
+                <span className="flex items-center gap-2">
+                  Connect with {providerSchemas.find((s) => s.providerType === selectedProvider)?.displayName ?? selectedProvider}
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </span>
+              ) : 'Finish'}
             </Button>
           )}
         </div>

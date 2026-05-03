@@ -10,6 +10,7 @@ import { CarbonIntensityChart } from "@/components/visualizations/carbon-intensi
 import { HouseLoadChart } from "@/components/visualizations/house-load-chart";
 import { EnergyFlowDiagram } from "@/components/visualizations/energy-flow-diagram-lazy";
 import { Skeleton, SkeletonChartCard } from "@/components/ui/skeleton";
+import { DisconnectedBanner } from "@/components/dashboard/disconnected-banner";
 import Link from "next/link";
 import { useSnapshot, useAnalytics, useAlerts } from "@/lib/hooks/use-energy-data";
 
@@ -53,6 +54,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <DisconnectedBanner />
       <Card>
         <CardHeader>
           <CardTitle>Dashboard</CardTitle>

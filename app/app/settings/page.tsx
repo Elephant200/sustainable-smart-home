@@ -7,6 +7,7 @@ import { SettingsNavigation } from "@/components/settings/settings-navigation";
 import { ConfigurationAlert } from "@/components/settings/configuration-alert";
 import { LocationSelector } from "@/components/settings/location-selector";
 import { DeviceConfiguration } from "@/components/settings/device-configuration";
+import { DeviceHealthCard } from "@/components/settings/device-health-card";
 import { NotificationSettingsCard } from "@/components/settings/notification-settings-card";
 import { RecentActivityCard } from "@/components/settings/recent-activity-card";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -76,7 +77,23 @@ export default async function SettingsPage() {
               </CardContent>
             </Card>
           </section>
-          
+
+          {/* Device Connection Health Section */}
+          <section id="device-health" className="scroll-mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Connection Health</CardTitle>
+                <CardDescription>
+                  Live connection status for each real-hardware device. Click Reconnect to re-run
+                  the authorization flow for OAuth providers (Tesla, Enphase) or update credentials
+                  in Device Configuration for API-key providers.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DeviceHealthCard />
+              </CardContent>
+            </Card>
+          </section>
 
           {/* Notification Settings Section — toggles are real, persisted per-device via localStorage. */}
           <section id="notification-settings" className="scroll-mt-6">

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext, findDeviceName } from '@/lib/server/device-context';
 import { createAdapter } from '@/lib/adapters/factory';
+import { createClient } from '@/lib/supabase/server';
 import { pickGridDevice } from '@/lib/server/system-devices';
+import { getPollingConfig } from '@/lib/server/polling-config';
 import { bucketAvgRate, isoHour } from '@/lib/server/adapter-flows';
 import {
   estimateRangeMiles,
@@ -54,9 +56,77 @@ export async function GET(req: NextRequest) {
 
   const evDevices = context.rawDevices.filter((d) => d.type === 'ev');
 
-  // Per-vehicle current status + per-vehicle 7-day charge history (used to
-  // derive last_charged_label deterministically) all flow through the
-  // adapter contract.
+  // Load sync-state freshness for live EV devices so we can prefer the most
+  // recently persisted ev_charge_sessions row over a live provider API call
+  // when the background cron has already synced within the polling window.
+  const liveEvIds = evDevices
+    .filter((d) => d.provider_type !== 'simulated')
+    .map((d) => d.id);
+
+  const evSyncStateByDevice = new Map<string, { isFresh: boolean }>();
+  if (liveEvIds.length > 0) {
+    const supabase = await createClient();
+    const { data: syncRows } = await supabase
+      .from('device_sync_state')
+      .select('device_id, last_success_at')
+      .in('device_id', liveEvIds);
+    for (const row of syncRows ?? []) {
+      const lastSuccessAt = row.last_success_at ? new Date(row.last_success_at) : null;
+      const providerType = evDevices.find((d) => d.id === row.device_id)?.provider_type;
+      const cfg = providerType ? getPollingConfig(providerType as import('@/lib/adapters/types').ProviderType) : null;
+      const isFresh =
+        lastSuccessAt != null &&
+        cfg != null &&
+        (Date.now() - lastSuccessAt.getTime()) / 1000 <= cfg.minIntervalSec * 2;
+      evSyncStateByDevice.set(row.device_id, { isFresh });
+    }
+  }
+
+  // Per-vehicle current status: prefer the most recent persisted
+  // ev_charge_sessions row when a fresh background sync exists.
+  // This avoids redundant provider API round-trips for recently-synced vehicles.
+  const getEvStatus = async (d: (typeof evDevices)[number]) => {
+    const syncInfo = evSyncStateByDevice.get(d.id);
+    if (syncInfo?.isFresh && d.provider_type !== 'simulated') {
+      const supabase = await createClient();
+      const { data: persisted } = await supabase
+        .from('ev_charge_sessions')
+        .select('soc_percent, plugged_in, timestamp')
+        .eq('device_id', d.id)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single();
+      // Two-layer freshness: also validate the row's own timestamp so that
+      // a stale ev_charge_sessions row (from before the sync window) is never
+      // served as fresh data, even if device_sync_state.last_success_at is recent.
+      // This prevents the sync_state/ingestion-write-failure skew that would
+      // otherwise cause a device to appear fresh while serving stale values.
+      const providerCfg = getPollingConfig(d.provider_type as import('@/lib/adapters/types').ProviderType);
+      const rowFresh =
+        persisted != null &&
+        (Date.now() - new Date(persisted.timestamp).getTime()) / 1000 <=
+          providerCfg.minIntervalSec * 2;
+      if (rowFresh && persisted) {
+        const evCfg = context.evConfigs.find((c) => c.id === d.id);
+        // evChargeRateKw is intentionally omitted — ev_charge_sessions stores
+        // only SoC and plugged state, not instantaneous charge rate. The
+        // downstream consumer defaults missing rate to 0.
+        return {
+          deviceId: d.id,
+          providerType: d.provider_type as import('@/lib/adapters/types').ProviderType,
+          timestamp: new Date(persisted.timestamp),
+          isLive: true,
+          evSOCPercent: persisted.soc_percent ?? undefined,
+          evPluggedIn: persisted.plugged_in ?? false,
+          evBatteryCapacityKwh: evCfg?.battery_capacity_kwh,
+        } as Awaited<ReturnType<ReturnType<typeof createAdapter>['getStatus']>>;
+      }
+    }
+    return createAdapter(d, adapterCtx).getStatus();
+  };
+
+  // Per-vehicle 7-day charge history (used to derive last_charged_label
+  // deterministically) and grid history all flow through the adapter contract.
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const start24h = new Date(now.getTime() - 23 * 60 * 60 * 1000);
   start24h.setMinutes(0, 0, 0);
@@ -71,7 +141,7 @@ export async function GET(req: NextRequest) {
 
   const [evStatuses, evWeekHistories, ev24hHistories, evMonthHistories, gridDayHistory, gridMonthHistory] =
     await Promise.all([
-      Promise.all(evDevices.map((d) => createAdapter(d, adapterCtx).getStatus())),
+      Promise.all(evDevices.map((d) => getEvStatus(d))),
       Promise.all(
         evDevices.map((d) =>
           createAdapter(d, adapterCtx).getHistory({

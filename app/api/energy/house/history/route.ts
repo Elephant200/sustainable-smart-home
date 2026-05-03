@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { loadUserContext } from '@/lib/server/device-context';
+import { createClient } from '@/lib/supabase/server';
 import { createAdapter } from '@/lib/adapters/factory';
 import { pickHouseDevice } from '@/lib/server/system-devices';
 import { checkReadRateLimit } from '@/lib/api/rate-limit';
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
 
   const qr = validateQuery(RangeQuerySchema, req.nextUrl.searchParams);
   if (qr.error) return qr.error;
-  const range = qr.data.range ?? '24h';
+  const range = (qr.data as { range?: string }).range ?? '24h';
   const hours = rangeToHours(range);
 
   const now = new Date();
@@ -50,6 +51,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ range, points: [], has_house: false });
   }
 
+  // Prefer persisted house_load rows (written by the background cron) when the
+  // house device is a real (non-simulated) provider and data exists in the window.
+  if (houseDevice.provider_type !== 'simulated') {
+    const supabase = await createClient();
+    const { data: check } = await supabase
+      .from('house_load')
+      .select('timestamp')
+      .eq('user_id', context.user.id)
+      .gte('timestamp', start.toISOString())
+      .eq('resolution', '1hr')
+      .limit(1)
+      .single();
+
+    if (check) {
+      const { data: rows } = await supabase
+        .from('house_load')
+        .select('timestamp, energy_kwh')
+        .eq('user_id', context.user.id)
+        .gte('timestamp', start.toISOString())
+        .lte('timestamp', now.toISOString())
+        .eq('resolution', '1hr')
+        .order('timestamp', { ascending: true });
+
+      const points = (rows ?? []).map((row) => ({
+        timestamp: row.timestamp,
+        energy_kwh: Math.round((row.energy_kwh ?? 0) * 100) / 100,
+      }));
+
+      return NextResponse.json({ range, points, has_house: true });
+    }
+  }
+
+  // Fallback: live adapter call (simulated devices, or before first cron sync).
   const series = await createAdapter(houseDevice, {
     persistConfig: context.persistConnectionConfig,
   }).getHistory({

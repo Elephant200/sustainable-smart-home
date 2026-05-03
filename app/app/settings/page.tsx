@@ -5,6 +5,7 @@ import { DeleteAccountCard } from "@/components/settings/delete-account-card";
 import { ThemeSettingsCard } from "@/components/settings/theme-settings-card";
 import { SettingsNavigation } from "@/components/settings/settings-navigation";
 import { ConfigurationAlert } from "@/components/settings/configuration-alert";
+import { OAuthResultBanner } from "@/components/settings/oauth-result-banner";
 import { LocationSelector } from "@/components/settings/location-selector";
 import { DeviceConfiguration } from "@/components/settings/device-configuration";
 import { DeviceHealthCard } from "@/components/settings/device-health-card";
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <ConfigurationAlert />
+      <OAuthResultBanner />
       {/* Keep the uppermost description card in place */}
       <Card>
         <CardHeader>

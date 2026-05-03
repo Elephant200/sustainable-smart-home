@@ -152,9 +152,17 @@ ELECTRICITYMAPS_API_KEY=           # Grid carbon intensity data
 GOOGLE_MAPS_API_KEY=               # Geocoding for the location selector
 
 # Optional — OAuth fallback for live providers (can also be stored per-device)
+# When set, the Settings → Device Configuration cards for tesla/enphase devices
+# render a "Connect with Tesla / Connect with Enphase" button that kicks off
+# the OAuth handshake. Without these the OAuth handshake routes cannot
+# complete, so the buttons are intentionally hidden.
+# Availability is exposed via GET /api/auth/oauth/providers.
 TESLA_CLIENT_ID=                   # Tesla Fleet API OAuth app client ID
+                                   # — required for the "Connect with Tesla" button to appear
 ENPHASE_CLIENT_ID=                 # Enphase Enlighten OAuth app client ID
+                                   # — required for the "Connect with Enphase" button to appear
 ENPHASE_CLIENT_SECRET=             # Enphase Enlighten OAuth app client secret
+                                   # — required for the "Connect with Enphase" button to appear
 
 # Optional — Home Assistant SSRF allowlist (comma-separated hosts)
 HOME_ASSISTANT_ALLOWED_HOSTS=      # Allows RFC1918 HA hosts in production
@@ -199,6 +207,12 @@ Migration `supabase/migrations/004_device_sync_state.sql` adds a `device_sync_st
 - `components/settings/device-health-card.tsx` — Per-device status pill (ok/degraded/error/never synced), last-sync timestamp, error message, and a "Reconnect" button that triggers the OAuth start route for OAuth providers.
 - Added "Connection Health" section (`#device-health`) to `app/app/settings/page.tsx`, below Device Configuration.
 - Added "Connection Health" nav item to `components/settings/settings-navigation.tsx`.
+
+### Settings — OAuth "Connect" Buttons (Task #30)
+
+- `app/api/auth/oauth/providers/route.ts` — Public GET endpoint returning `{ providers: { tesla: bool, enphase: bool } }` based on whether the required OAuth env vars (`TESLA_CLIENT_ID`, `ENPHASE_CLIENT_ID`+`ENPHASE_CLIENT_SECRET`) are set. The Settings UI uses this to gate the visibility of the "Connect with Tesla / Connect with Enphase" buttons so they never render in environments where the handshake cannot succeed.
+- `components/settings/device-configuration.tsx` — Each Tesla/Enphase device card renders a "Connect with <Provider>" button (or "Reconnect <Provider>" with a check icon when `connection_config.is_configured === true`) that redirects to `/api/auth/oauth/<provider>/start?device_id=<id>`. The OAuth callback redirects back to `/app/settings?connected=<provider>` on success or `/app/settings?oauth_error=<msg>` on failure.
+- `components/settings/oauth-result-banner.tsx` — Inline success/error banner rendered at the top of the Settings page that reads the `?connected` / `?oauth_error` query params, shows a confirmation or error, and clears the params from the URL on dismiss so refreshes don't re-show the banner.
 
 ### Dashboard — Disconnected Banner
 

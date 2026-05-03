@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { fetchJson, FetchJsonError } from '@/lib/client/fetch-json';
 
 interface AuditLog {
   id: string;
@@ -63,16 +64,28 @@ export function RecentActivityCard() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/audit-log?limit=20')
-      .then((r) => r.json())
+    let cancelled = false;
+    fetchJson<{ logs: AuditLog[] }>('/api/audit-log?limit=20')
       .then((data) => {
+        if (cancelled) return;
         setLogs(data.logs ?? []);
         setLoading(false);
       })
-      .catch(() => {
-        setError('Could not load activity');
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // Surface the real reason rather than a generic message; this used
+        // to swallow 500s silently and then spam the dev error overlay if
+        // the response was HTML.
+        const message =
+          err instanceof FetchJsonError
+            ? err.status === 401
+              ? null
+              : `Could not load activity (${err.status || 'network'})`
+            : 'Could not load activity';
+        setError(message);
         setLoading(false);
       });
+    return () => { cancelled = true; };
   }, []);
 
   return (

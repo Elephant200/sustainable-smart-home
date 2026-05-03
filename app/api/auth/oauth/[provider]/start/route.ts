@@ -79,6 +79,30 @@ export async function GET(
   }
 
   const cfg = OAUTH_PROVIDERS[provider];
+
+  // Fail loudly when the OAuth client credentials aren't configured. Without
+  // this guard we'd redirect the user to the provider with an empty
+  // `client_id=` query param, and the provider responds with its own HTML
+  // error page — confusing UX and a JSON parse error in the dev overlay if
+  // any in-flight client fetch races with the navigation.
+  const clientId = process.env[cfg.clientIdEnv];
+  const clientSecret = cfg.clientSecretEnv ? process.env[cfg.clientSecretEnv] : 'n/a';
+  if (!clientId || !clientSecret) {
+    reqLog.warn('OAuth provider not configured', {
+      provider,
+      missing: !clientId ? cfg.clientIdEnv : cfg.clientSecretEnv,
+    });
+    return NextResponse.json(
+      {
+        error: `OAuth provider "${provider}" is not configured on this server. ` +
+          `The administrator needs to set ${cfg.clientIdEnv}` +
+          (cfg.clientSecretEnv ? ` and ${cfg.clientSecretEnv}` : '') +
+          '.',
+      },
+      { status: 503 }
+    );
+  }
+
   const state = generateState();
 
   const cookieStore = await cookies();
@@ -102,7 +126,7 @@ export async function GET(
 
   const authUrl = new URL(cfg.authUrl);
   authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('client_id', process.env[cfg.clientIdEnv] ?? '');
+  authUrl.searchParams.set('client_id', clientId);
   authUrl.searchParams.set('redirect_uri', redirectUri);
   authUrl.searchParams.set('state', state);
   if (cfg.scopes) {

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { fetchJson, FetchJsonError } from "@/lib/client/fetch-json";
 
 export function DeleteAccountCard() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -40,23 +41,27 @@ export function DeleteAccountCard() {
     setError(null);
 
     try {
-      // Call the API route to delete the account
-      const response = await fetch('/auth/delete-account', {
+      // Call the API route to delete the account. fetchJson throws a
+      // FetchJsonError carrying the server's error message (or a body
+      // excerpt if the response was HTML), so we never blow up on
+      // "Unexpected token '<'..." here.
+      await fetchJson('/auth/delete-account', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete account');
-      }
-
       // Redirect to account deleted page
       router.push("/auth/account-deleted");
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Failed to delete account");
+      const message =
+        error instanceof FetchJsonError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Failed to delete account";
+      setError(message);
     } finally {
       setIsLoading(false);
     }

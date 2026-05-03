@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fetchJson, FetchJsonError } from "@/lib/client/fetch-json";
 
 interface LocationSelectorProps {
   initialProfile?: {
@@ -62,19 +63,13 @@ export function LocationSelector({ initialProfile }: LocationSelectorProps) {
     setFeedback({ type: null, message: '' });
 
     try {
-      const response = await fetch('/api/configuration/update-location', {
+      const result = await fetchJson<{ zone_key: string }>('/api/configuration/update-location', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to save location');
-      }
-
-      const result = await response.json();
       
       // Update current profile with saved data
       setCurrentProfile({
@@ -96,11 +91,12 @@ export function LocationSelector({ initialProfile }: LocationSelectorProps) {
         type: 'success',
         message: `Location saved successfully! Zone: ${result.zone_key}`,
       });
-    } catch {
-      setFeedback({
-        type: 'error',
-        message: 'Failed to save location. Please try again.',
-      });
+    } catch (err) {
+      const message =
+        err instanceof FetchJsonError
+          ? err.message
+          : 'Failed to save location. Please try again.';
+      setFeedback({ type: 'error', message });
     } finally {
       setIsLoading(false);
     }

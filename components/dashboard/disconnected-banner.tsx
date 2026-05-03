@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { fetchJson } from "@/lib/client/fetch-json";
 
 interface DeviceHealth {
   device_id: string;
@@ -48,13 +49,14 @@ export function DisconnectedBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    fetch("/api/configuration/devices/health")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json: { devices?: DeviceHealth[] } | null) => {
+    fetchJson<{ devices?: DeviceHealth[] }>("/api/configuration/devices/health")
+      .then((json) => {
         if (!json?.devices) return;
         setProblematic(json.devices.filter(isLongDisconnected));
       })
-      .catch(() => {});
+      .catch(() => {
+        // Banner is informational; silently degrade if the health endpoint fails.
+      });
   }, []);
 
   if (dismissed || problematic.length === 0) return null;

@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 import { Plus, Battery, Sun, Car, Zap, Home, Edit, Trash2, ExternalLink, CheckCircle2 } from "lucide-react";
 import { AddDeviceDialog } from "./add-device-dialog";
+import { fetchJson } from "@/lib/client/fetch-json";
 
 const OAUTH_PROVIDERS = new Set(['tesla', 'enphase']);
 const OAUTH_PROVIDER_LABEL: Record<string, string> = {
@@ -77,9 +78,8 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
   // Fetch devices from API
   const fetchDevices = () => {
     let cancelled = false;
-    fetch('/api/configuration/devices')
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch devices'))))
-      .then((data: { devices: DeviceWithConfig[] }) => {
+    fetchJson<{ devices: DeviceWithConfig[] }>('/api/configuration/devices')
+      .then((data) => {
         if (!cancelled) setDevices(data.devices);
       })
       .catch((err: unknown) => console.error('Error fetching devices:', err));
@@ -97,9 +97,8 @@ export function DeviceConfiguration({ initialDevices = [] }: DeviceConfiguration
   // button would be misleading.
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/auth/oauth/providers')
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Failed to fetch oauth providers'))))
-      .then((data: { providers: Record<string, boolean> }) => {
+    fetchJson<{ providers: Record<string, boolean> }>('/api/auth/oauth/providers')
+      .then((data) => {
         if (!cancelled) setOauthProviders(data.providers ?? {});
       })
       .catch((err: unknown) => console.error('Error fetching oauth providers:', err));

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, CheckCircle2, Clock, RefreshCw, WifiOff } from "lucide-react";
+import { fetchJson } from "@/lib/client/fetch-json";
 
 interface DeviceHealth {
   device_id: string;
@@ -134,9 +135,7 @@ export function DeviceHealthCard() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/configuration/devices/health");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      const json = await fetchJson<{ devices: DeviceHealth[] }>("/api/configuration/devices/health");
       setDevices(json.devices ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load device health");

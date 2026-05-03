@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { fetchJson } from "@/lib/client/fetch-json"
 
 type GridData = {
   id: string
@@ -50,11 +51,7 @@ export function CarbonIntensityChart() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const response = await fetch('/api/grid-data')
-        if (!response.ok) {
-          throw new Error('Failed to fetch grid data')
-        }
-        const gridData = await response.json()
+        const gridData = await fetchJson<GridData[]>('/api/grid-data')
         setData(gridData)
         setError(null)
       } catch (err) {

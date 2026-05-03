@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, Loader2, ChevronDown, ChevronUp, Info, ExternalLink } from "lucide-react";
+import { CheckCircle, Loader2, ChevronDown, ChevronUp, Info, ExternalLink, AlertCircle } from "lucide-react";
 import { getAllProviderSchemas } from "@/lib/adapters/factory";
 import { ProviderType, ConnectionSchema, ConnectionFieldSchema } from "@/lib/adapters/types";
+import { fetchJson, FetchJsonError } from "@/lib/client/fetch-json";
 
 const OAUTH_PROVIDERS: ReadonlySet<ProviderType> = new Set(['tesla', 'enphase']);
 
@@ -61,6 +62,24 @@ export function AddDeviceDialog({
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>('simulated');
   const [connectionConfig, setConnectionConfig] = useState<Record<string, string>>({});
   const [showProviderFields, setShowProviderFields] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [oauthProviders, setOauthProviders] = useState<Record<string, boolean>>({});
+
+  // Fetch which OAuth providers are configured on this server. We use this
+  // to disable the "Connect with X" button when the env vars are missing,
+  // instead of redirecting the user into a half-broken OAuth handshake.
+  useEffect(() => {
+    let cancelled = false;
+    fetchJson<{ providers: Record<string, boolean> }>('/api/auth/oauth/providers')
+      .then((data) => {
+        if (!cancelled) setOauthProviders(data.providers ?? {});
+      })
+      .catch(() => {
+        // Non-fatal: leave map empty and the buttons stay disabled with
+        // a tooltip explaining that the provider isn't available.
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // Re-initialise form state when the dialog opens or the editing target changes.
   // React's "setState during render" pattern: when sessionId changes React will
@@ -123,6 +142,7 @@ export function AddDeviceDialog({
     setSelectedProvider('simulated');
     setConnectionConfig({});
     setShowProviderFields(false);
+    setSubmitError(null);
     onClose();
   };
 
@@ -188,14 +208,27 @@ export function AddDeviceDialog({
    * and redirect the user to /settings when finished.
    */
   const handleFinish = async () => {
-    try {
-      const isEditing = !!editingDevice;
-      const url = isEditing
-        ? `/api/configuration/devices/${editingDevice.id}`
-        : '/api/configuration/devices';
-      const method = isEditing ? 'PUT' : 'POST';
+    setSubmitError(null);
+    const isEditing = !!editingDevice;
+    const url = isEditing
+      ? `/api/configuration/devices/${editingDevice.id}`
+      : '/api/configuration/devices';
+    const method = isEditing ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+    // Block the OAuth path early if the provider isn't configured server-side.
+    // Otherwise we'd save the device and then immediately bounce the user to
+    // a /start endpoint that responds 503, which is confusing.
+    if (isOAuthProvider && !isEditing && oauthProviders[selectedProvider] !== true) {
+      setSubmitError(
+        `Cannot connect to ${activeSchema.displayName}: this server has no OAuth credentials configured for it. Ask the administrator to set the required environment variables.`
+      );
+      setStep('form');
+      return;
+    }
+
+    let saved: { id?: string; device?: { id?: string } };
+    try {
+      saved = await fetchJson<{ id?: string; device?: { id?: string } }>(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -205,30 +238,33 @@ export function AddDeviceDialog({
           connection_config: connectionConfig,
         }),
       });
+    } catch (error) {
+      const message =
+        error instanceof FetchJsonError
+          ? error.message
+          : `Error ${isEditing ? 'updating' : 'adding'} device`;
+      console.error(message, error);
+      setSubmitError(message);
+      setStep('form');
+      return;
+    }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error(`Failed to ${isEditing ? 'update' : 'add'} device:`, errorData.error);
+    // For OAuth providers, redirect into the authorization flow immediately
+    // after saving the device record so the user can grant access without
+    // having to manually paste access/refresh tokens.
+    if (isOAuthProvider && !isEditing) {
+      const deviceId = saved.id ?? saved.device?.id;
+      if (deviceId) {
+        window.location.href = `/api/auth/oauth/${selectedProvider}/start?device_id=${deviceId}`;
         return;
       }
-
-      // For OAuth providers, redirect into the authorization flow immediately
-      // after saving the device record so the user can grant access without
-      // having to manually paste access/refresh tokens.
-      if (isOAuthProvider && !isEditing) {
-        const data = await response.json();
-        const deviceId: string = data.id ?? data.device?.id;
-        if (deviceId) {
-          window.location.href = `/api/auth/oauth/${selectedProvider}/start?device_id=${deviceId}`;
-          return;
-        }
-      }
-
-      onDeviceAdded?.();
-      handleClose();
-    } catch (error) {
-      console.error(`Error ${editingDevice ? 'updating' : 'adding'} device:`, error);
+      setSubmitError('Device was saved but no device ID was returned, so we could not start the OAuth flow.');
+      setStep('form');
+      return;
     }
+
+    onDeviceAdded?.();
+    handleClose();
   };
 
   const getDeviceTitle = () => {
@@ -553,6 +589,13 @@ export function AddDeviceDialog({
         {step === 'connecting' && renderConnecting()}
         {step === 'connected' && renderConnected()}
 
+        {submitError && (
+          <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span className="break-words">{submitError}</span>
+          </div>
+        )}
+
         <div className="flex justify-between pt-4">
           {step === 'form' && (
             <>
@@ -572,14 +615,34 @@ export function AddDeviceDialog({
             </Button>
           )}
           {step === 'connected' && (
-            <Button onClick={handleFinish} className="mx-auto">
-              {isOAuthProvider && !editingDevice ? (
-                <span className="flex items-center gap-2">
-                  Connect with {providerSchemas.find((s) => s.providerType === selectedProvider)?.displayName ?? selectedProvider}
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </span>
-              ) : 'Finish'}
-            </Button>
+            <div className="mx-auto flex flex-col items-center gap-2">
+              {(() => {
+                const oauthAvailable = oauthProviders[selectedProvider] === true;
+                const oauthBlocked = isOAuthProvider && !editingDevice && !oauthAvailable;
+                return (
+                  <>
+                    <Button
+                      onClick={handleFinish}
+                      disabled={oauthBlocked}
+                      title={oauthBlocked ? `${activeSchema.displayName} OAuth is not configured on this server` : undefined}
+                    >
+                      {isOAuthProvider && !editingDevice ? (
+                        <span className="flex items-center gap-2">
+                          Connect with {activeSchema.displayName}
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </span>
+                      ) : 'Finish'}
+                    </Button>
+                    {oauthBlocked && (
+                      <p className="text-xs text-muted-foreground text-center max-w-xs">
+                        {activeSchema.displayName} OAuth is not configured on this server.
+                        Ask the administrator to set the required environment variables.
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
           )}
         </div>
       </DialogContent>
